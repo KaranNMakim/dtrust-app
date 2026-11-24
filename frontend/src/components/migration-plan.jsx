@@ -35,7 +35,7 @@ export function MigrationPlan({ conflictId, onChanged }) {
                 <span className="font-medium">{v.name}</span>
                 <span className="text-xs text-muted-foreground">{v.used_in} dashboard(s)</span>
                 <span className="flex-1"/>
-                <Link className="text-xs text-primary" to={`/reconcile?a=${v.metric_id}&b=${data.canonical?.metric_id}`}>Reconcile</Link>
+                <Link className="text-xs text-primary" to={`/reconcile?a=${v.metric_id}&b=${data.canonical?.metric_id}`}>Compare</Link>
                 <Button variant={v.action.type === "deprecate" ? "danger" : "outline"} className="h-8" disabled={!!done[v.metric_id]} onClick={() => execute(v)}>
                   {done[v.metric_id] ?? v.action.label}
                 </Button>

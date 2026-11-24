@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Check, Loader2, X } from "lucide-react";
 import { api, BILLING } from "@/lib/api";
-import { Button } from "@/components/dt-ui";
+import { Button, Notice } from "@/components/dt-ui";
 
 export const inr = (n) => `₹${Number(n).toLocaleString("en-IN")}`;
 
@@ -93,13 +93,11 @@ export function BuyCreditsDialog({ open, reason, me, onClose, onPaid, onPremium 
           <button data-testid="buy-credits-close" onClick={onClose} className="rounded-md p-1 hover:bg-muted"><X className="h-4 w-4"/></button>
         </div>
         <p className="mt-3 text-sm">Balance: <b data-testid="dialog-credit-balance">{me?.credits ?? "…"}</b> credits</p>
-        {me && !me.payments_enabled && (<p className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">Payments aren't switched on yet. Credit packs can be bought once the owner adds the payment keys.</p>)}
+        {me && !me.payments_enabled && (<Notice className="mt-3" data-testid="payments-off-notice">Payments aren't switched on yet. Credit packs can be bought once the owner adds the payment keys.</Notice>)}
         <div className="mt-5 grid gap-4 sm:grid-cols-3">
           {packs.map((p, i) => (<PackCard key={p.id} pack={p} best={i === packs.length - 1} busy={busy === p.id} disabled={!me?.payments_enabled || !!busy} onBuy={buy}/>))}
         </div>
-        {msg && (<p data-testid="buy-credits-message" className={`mt-4 flex items-center gap-2 text-sm ${msg.ok ? "text-green-700" : "text-red-700"}`}>
-            {msg.ok && <Check className="h-4 w-4"/>}{msg.text}
-          </p>)}
+        {msg && <Notice className="mt-4" tone={msg.ok ? "info" : "error"} data-testid="buy-credits-message">{msg.text}</Notice>}
         <div className="mt-4 flex items-center justify-between gap-3">
           <p className="text-xs text-muted-foreground">Secure checkout by Razorpay: cards, UPI and netbanking. Prices in Indian rupees.</p>
           <button data-testid="dialog-join-waitlist" onClick={onPremium} className="shrink-0 text-xs font-medium text-primary hover:underline">Need more? Join the premium waitlist →</button>

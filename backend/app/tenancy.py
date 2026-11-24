@@ -116,6 +116,11 @@ async def bind_user(request: Request) -> dict:
     return member
 
 
+def current_store():
+    eng = _engine_var.get(None)
+    return eng.store if eng is not None else None
+
+
 def current_email() -> str:
     m = _member_var.get()
     return m.get("email") or m["user_id"]

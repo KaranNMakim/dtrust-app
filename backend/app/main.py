@@ -24,6 +24,7 @@ from .config import settings
 from .engine import ActionError, TrustEngine, conflict_dict, score_dict
 from .llm import ClaudeGateway
 from .store import Store
+from .humanize import HumanizedRoute
 from .tenancy import (apply_extract, apply_ingest, bind_user, charge, current_email, current_workspace, engine, llm,
                       own_data_only, paid_action, record, user_ask_log)
 
@@ -34,7 +35,7 @@ neo4j_graph = None  # Neo4j projection is single-tenant; per-user workspaces use
 
 
 
-router = APIRouter(dependencies=[Depends(bind_user)])
+router = APIRouter(dependencies=[Depends(bind_user)], route_class=HumanizedRoute)
 
 
 def problem(status: int, title: str, detail: str) -> HTTPException:

@@ -1,7 +1,9 @@
+import { Link } from "react-router-dom";
+import { plainError } from "@/lib/format";
 import { useState } from "react";
 import { API, authHeaders, notifyCreditsChanged } from "@/lib/api";
 import { useWorkspace } from "@/lib/workspace";
-import { Button, Card, CardTitle } from "@/components/dt-ui";
+import { Button, Card, CardTitle, Notice } from "@/components/dt-ui";
 const TYPES = [
     { key: "glossary", label: "Business glossary", cols: "term_id, term, definition, steward_email, required_components, synonyms" },
     { key: "metric", label: "Metrics (dashboard KPIs)", cols: "metric_id, name, formula, grain, owner_email, team, glossary_term, data_product, certification, refresh_sla_h, last_refreshed" },
@@ -50,7 +52,7 @@ function BiExtract() {
         <Button data-testid="extract-preview" variant="outline" onClick={() => send(false)} disabled={!file}>Preview · free</Button>
         <Button data-testid="extract-commit" onClick={() => send(true)} disabled={!file || ws === "demo"}>Add to my workspace · 1 credit</Button>
       </div>
-      {err && <p className="text-xs text-red-700">{err}</p>}
+      {err && <Notice tone="error" data-testid="extract-error">{plainError(err)}</Notice>}
       {res && (<div className="space-y-2 text-xs">
           <p className="font-medium">{res.metrics.length} metric(s), {res.dashboards.length} dashboard(s) from {res.source_name}</p>
           <table className="w-full">
@@ -64,8 +66,8 @@ function BiExtract() {
             </tbody>
           </table>
           {res.dashboards.map((d) => (<p key={d.name}>Dashboard <b>{d.name}</b>{d.local_overrides ? ` · filters: ${d.local_overrides.replaceAll("|", "; ")}` : ""}</p>))}
-          {res.warnings.map((w) => <p key={w} className="text-amber-700">⚠ {w}</p>)}
-          {res.new_conflicts && <p className="text-red-700">{res.new_conflicts.length} conflict(s) now open on these metrics. See the conflict queue.</p>}
+          {res.warnings.map((w) => <Notice key={w}>{w}</Notice>)}
+          {res.new_conflicts && <Notice>{res.new_conflicts.length} issue(s) now open on these metrics. <Link className="text-primary underline" to="/conflicts">See Issues to fix</Link>.</Notice>}
         </div>)}
     </Card>);
 }
@@ -99,7 +101,7 @@ export default function IngestPage() {
         }));
     }
     return (<div className="mx-auto max-w-4xl space-y-4">
-      <h1 className="text-2xl font-semibold">Ingest metadata</h1>
+      <h1 className="text-2xl font-semibold">Add data</h1>
       <p className="text-sm text-muted-foreground">Metadata only: no row-level data ever leaves your systems. Scores recompute after every upload. Each upload uses 1 credit and is saved to your workspace.</p>
       <DemoNotice />
       <BiExtract />

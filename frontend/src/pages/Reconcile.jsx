@@ -73,7 +73,7 @@ function ReconcileInner() {
       <Card className="flex flex-col gap-4 md:flex-row md:items-end">
         <Picker label="Number A" metric={a} dash={da} metrics={sorted} dashes={dashes.data ?? []} onMetric={setA} onDash={setDa}/>
         <Picker label="Number B" metric={b} dash={db} metrics={sorted} dashes={dashes.data ?? []} onMetric={setB} onDash={setDb}/>
-        <Button data-testid="reconcile-submit" className="h-10 whitespace-nowrap" onClick={() => run()}>Reconcile <CostTag/></Button>
+        <Button data-testid="reconcile-submit" className="h-10 whitespace-nowrap" onClick={() => run()}>Compare <CostTag/></Button>
       </Card>
       <ErrorNote error={err ?? metrics.error}/>
       {rec && <ReconcileView rec={rec}/>}

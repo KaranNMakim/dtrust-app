@@ -1,10 +1,11 @@
+import { issueType } from "@/lib/format";
 import { Link } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { useApi } from "@/lib/api";
 import { zoneColor, zoneLabel } from "@/lib/utils";
 import { CostTag, useWorkspace } from "@/lib/workspace";
-import { Button, Card, CardTitle, ErrorNote, Input, ScoreRing, SeverityBadge } from "@/components/dt-ui";
+import { Button, Card, CardTitle, ErrorNote, Input, ScoreRing, SeverityBadge, Hint } from "@/components/dt-ui";
 function EmptyWorkspace({ data }) {
     const { ws } = useWorkspace();
     if (ws !== "mine" || !data || data.metrics > 0)
@@ -44,7 +45,7 @@ export default function Home() {
           <p className="font-semibold">Two dashboards showing different numbers?</p>
           <p className="text-sm text-muted-foreground">See every reason they differ and a bridge from one number to the other.</p>
         </div>
-        <Link to="/reconcile" data-testid="home-reconcile-link"><Button variant="outline">Reconcile</Button></Link>
+        <Link to="/reconcile" data-testid="home-reconcile-link"><Button variant="outline">Compare two numbers</Button></Link>
       </Card>
 
       {data && !(ws === "mine" && data.metrics === 0) && (<>
@@ -61,9 +62,9 @@ export default function Home() {
               <ZoneBar zones={data.zones}/>
             </Card>
             <Card>
-              <CardTitle>Open conflicts</CardTitle>
+              <CardTitle>Open issues</CardTitle>
               <p className="mt-3 text-3xl font-semibold">{data.conflicts_open}</p>
-              <p className="text-sm text-red-700">{data.conflicts_critical} critical</p>
+              <p className="text-sm text-muted-foreground"><Hint text="Issues that affect leadership dashboards or certified numbers. They take the most points off trust scores.">{data.conflicts_critical} critical</Hint></p>
               <CardTitle className="mt-4">AI recommendations</CardTitle>
               <p className="mt-1 text-sm">
                 {["green", "yellow", "red"].map((z) => (<span key={z} className="mr-3" style={{ color: zoneColor[z] }}>
@@ -75,14 +76,14 @@ export default function Home() {
 
           <Card>
             <div className="mb-3 flex items-center justify-between">
-              <CardTitle>Top conflicts by blast radius</CardTitle>
-              <Link to="/conflicts" className="text-sm text-primary">Open conflict queue</Link>
+              <CardTitle>Biggest issues, by dashboards affected</CardTitle>
+              <Link to="/conflicts" className="text-sm text-primary">See all issues to fix</Link>
             </div>
             <table className="w-full text-sm">
               <tbody>
                 {data.top_conflicts.map((c) => (<tr key={c.id} className="border-t border-border">
                     <td className="py-2 pr-3"><SeverityBadge severity={c.severity}/></td>
-                    <td className="py-2 pr-3 font-mono text-xs text-muted-foreground">{c.code}</td>
+                    <td className="py-2 pr-3 text-xs text-muted-foreground">{issueType(c.code)}</td>
                     <td className="py-2 pr-3">{c.title}</td>
                     <td className="py-2 text-right text-muted-foreground">{c.blast_radius} dashboards</td>
                   </tr>))}

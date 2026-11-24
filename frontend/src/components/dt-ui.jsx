@@ -1,6 +1,28 @@
 // Minimal shadcn/ui-style primitives. Swap for `npx shadcn add card badge button input` if preferred.
 import * as React from "react";
+import { AlertCircle, Info } from "lucide-react";
 import { cn, zoneColor, zoneLabel } from "@/lib/utils";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { APPROVAL, plainError } from "@/lib/format";
+
+// Explains where a number or label comes from. Dotted underline signals there is more to read.
+export function Hint({ text, children, className, testId }) {
+    return (<Tooltip delayDuration={150}>
+      <TooltipTrigger asChild>
+        <span data-testid={testId} tabIndex={0} className={cn("cursor-help underline decoration-dotted decoration-muted-foreground/60 underline-offset-4", className)}>{children}</span>
+      </TooltipTrigger>
+      <TooltipContent className="max-w-xs bg-foreground text-white leading-relaxed">{text}</TooltipContent>
+    </Tooltip>);
+}
+
+// Neutral system message: blue for info and success, red only for real errors. Always icon + text.
+export function Notice({ tone = "info", children, className, ...p }) {
+    const Icon = tone === "error" ? AlertCircle : Info;
+    const styles = tone === "error" ? "border-red-200 bg-red-50 text-red-800" : "border-blue-200 bg-blue-50 text-blue-900";
+    return (<div role={tone === "error" ? "alert" : "status"} className={cn("flex items-start gap-2 rounded-md border px-3 py-2 text-sm", styles, className)} {...p}>
+      <Icon className="mt-0.5 h-4 w-4 shrink-0"/><div>{children}</div>
+    </div>);
+}
 export function Card({ className, ...p }) {
     return <div className={cn("rounded-lg border border-border bg-white p-5 shadow-sm", className)} {...p}/>;
 }
@@ -27,7 +49,7 @@ export function ScorePill({ score, zone }) {
       {Math.round(score)}
     </span>);
 }
-export function ScoreRing({ score, zone, size = 112 }) {
+export function ScoreRing({ score, zone, size = 112, hint }) {
     const r = size / 2 - 8;
     const c = 2 * Math.PI * r;
     return (<div className="flex flex-col items-center gap-1">
@@ -38,16 +60,15 @@ export function ScoreRing({ score, zone, size = 112 }) {
           {Math.round(score)}
         </text>
       </svg>
-      <span className="text-xs text-muted-foreground">{zoneLabel[zone]}</span>
+      {hint ? <Hint text={hint} className="text-xs text-muted-foreground" testId="score-ring-hint">{zoneLabel[zone]} · how is this scored?</Hint>
+            : <span className="text-xs text-muted-foreground">{zoneLabel[zone]}</span>}
     </div>);
 }
 export function CertBadge({ certification }) {
     if (certification === "certified")
-        return <Badge className="border-green-300 bg-green-50 text-green-800">CERTIFIED</Badge>;
-    if (certification === "deprecated")
-        return <Badge className="border-gray-300 bg-gray-50 text-gray-600">DEPRECATED</Badge>;
-    if (certification === "pending")
-        return <Badge className="border-blue-300 bg-blue-50 text-blue-800">PENDING</Badge>;
+        return <Badge className="border-blue-300 bg-blue-50 text-blue-800">Official definition</Badge>;
+    if (certification === "deprecated" || certification === "pending")
+        return <Badge className="border-gray-300 bg-gray-50 text-gray-600">{APPROVAL[certification]}</Badge>;
     return null;
 }
 export function SeverityBadge({ severity }) {
@@ -56,9 +77,7 @@ export function SeverityBadge({ severity }) {
 export function ErrorNote({ error }) {
     if (!error)
         return null;
-    return (<div data-testid="error-note" className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
-      {error}
-    </div>);
+    return <Notice tone="error" data-testid="error-note">{plainError(error)}</Notice>;
 }
 export function ComponentBars({ components }) {
     return (<div className="space-y-4">
@@ -67,11 +86,14 @@ export function ComponentBars({ components }) {
             return (<div key={c.key}>
             <div className="mb-1 flex items-baseline justify-between text-sm">
               <span className="font-medium">
-                {c.label} <span className="text-muted-foreground">· weight {Math.round(c.weight * 100)}%</span>
+                {c.label}{" "}
+                <Hint text={`This check counts for ${Math.round(c.weight * 100)}% of the overall trust score. The weights are set on the Calibration page.`} className="text-muted-foreground">
+                  · counts {Math.round(c.weight * 100)}%
+                </Hint>
               </span>
-              <span className="font-semibold" style={{ color: zoneColor[z] }}>
-                {Math.round(c.raw)}
-              </span>
+              <Hint text={`Scored 0 to 100 from the evidence listed below. 80+ is trusted, 50 to 79 needs caution, under 50 should not be trusted.`} className="font-semibold">
+                <span style={{ color: zoneColor[z] }}>{Math.round(c.raw)}</span>
+              </Hint>
             </div>
             <div className="h-2 w-full rounded-full bg-muted">
               <div className="h-2 rounded-full" style={{ width: `${c.raw}%`, background: zoneColor[z] }}/>

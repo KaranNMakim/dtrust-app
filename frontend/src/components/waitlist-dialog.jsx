@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Check, Loader2, X } from "lucide-react";
 import { api, BACKEND_URL } from "@/lib/api";
-import { Button, Input } from "@/components/dt-ui";
+import { Button, Input, Notice } from "@/components/dt-ui";
 
 const PREMIUM = `${BACKEND_URL}/api/premium`;
 
@@ -48,7 +48,7 @@ export function WaitlistDialog({ open, onClose }) {
         return (<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" data-testid="waitlist-dialog">
         <div className="w-full max-w-lg space-y-4 rounded-lg border border-border bg-background p-6 shadow-xl" data-testid="waitlist-joined">
           <div className="flex items-start justify-between">
-            <h2 className="flex items-center gap-2 text-lg font-semibold"><Check className="h-5 w-5 text-green-700"/>You're on the premium waitlist</h2>
+            <h2 className="flex items-center gap-2 text-lg font-semibold"><Check className="h-5 w-5 text-primary"/>You're on the premium waitlist</h2>
             <button type="button" data-testid="waitlist-close" onClick={close} className="rounded-md p-1 hover:bg-muted"><X className="h-4 w-4"/></button>
           </div>
           <p className="text-sm text-muted-foreground">{msg?.ok ? msg.text : "We'll email your account address when your spot opens."}</p>
@@ -75,9 +75,7 @@ export function WaitlistDialog({ open, onClose }) {
           <span>Reason</span>
           <textarea data-testid="waitlist-reason" value={reason} maxLength={2000} rows={5} required onChange={(e) => setReason(e.target.value)} placeholder="e.g. We have 40 analysts and want to reconcile our Power BI and Tableau revenue dashboards every week." className="w-full rounded-md border border-border bg-white px-4 py-3 text-sm font-normal outline-none focus:ring-2 focus:ring-primary/40"/>
         </label>
-        {msg && (<p data-testid="waitlist-message" className={`flex items-center gap-2 text-sm ${msg.ok ? "text-green-700" : "text-red-700"}`}>
-            {msg.ok && <Check className="h-4 w-4"/>}{msg.text}
-          </p>)}
+        {msg && <Notice tone={msg.ok ? "info" : "error"} data-testid="waitlist-message">{msg.text}</Notice>}
         <div className="flex justify-end gap-2">
           <Button type="button" variant="outline" onClick={close}>Cancel</Button>
           <Button data-testid="waitlist-submit" type="submit" disabled={busy}>{busy ? <Loader2 className="h-4 w-4 animate-spin"/> : "Join waitlist"}</Button>

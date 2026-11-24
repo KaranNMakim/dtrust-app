@@ -1,6 +1,6 @@
-import { Check, Coins, Lock, Sparkles } from "lucide-react";
+import { AlertCircle, Check, Clock, Coins, Lock, Sparkles } from "lucide-react";
 import { BILLING, useApi } from "@/lib/api";
-import { Button, Card, CardTitle, ErrorNote } from "@/components/dt-ui";
+import { Button, Card, CardTitle, ErrorNote, Notice } from "@/components/dt-ui";
 import { useCredits } from "@/components/credits";
 import { useWaitlist } from "@/components/waitlist-dialog";
 import { inr, PackCard, useCheckout } from "@/components/buy-credits-dialog";
@@ -12,6 +12,14 @@ const FREE_FEATURES = [
     "Trust Graph, calibration and dbt / Databricks export",
     "Preview what we read from your Power BI or Tableau files",
 ];
+
+function PaymentStatus({ status }) {
+    if (status === "paid")
+        return <span className="inline-flex items-center gap-1 font-semibold text-blue-800"><Check className="h-3.5 w-3.5"/>Paid</span>;
+    if (status === "failed")
+        return <span className="inline-flex items-center gap-1 font-semibold text-red-700"><AlertCircle className="h-3.5 w-3.5"/>Failed</span>;
+    return <span className="inline-flex items-center gap-1 text-muted-foreground"><Clock className="h-3.5 w-3.5"/>Not completed</span>;
+}
 
 const when = (iso) => new Date(iso).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" });
 
@@ -25,7 +33,7 @@ function Plans({ me, onPremium }) {
         </div>
         <p className="text-sm text-muted-foreground">Free forever. Test-drive everything on the Acme demo company.</p>
         <ul className="mt-4 space-y-1.5 text-sm">
-          {FREE_FEATURES.map((f) => <li key={f} className="flex gap-2"><Check className="mt-0.5 h-4 w-4 shrink-0 text-green-700"/>{f}</li>)}
+          {FREE_FEATURES.map((f) => <li key={f} className="flex gap-2"><Check className="mt-0.5 h-4 w-4 shrink-0 text-primary"/>{f}</li>)}
         </ul>
       </Card>
       <Card data-testid="plan-credits">
@@ -67,11 +75,11 @@ export default function BillingPage() {
       <Plans me={me} onPremium={openPremium}/>
       <div>
         <CardTitle className="mb-3">Credit packs</CardTitle>
-        {me && !me.payments_enabled && (<p className="mb-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">Payments aren't switched on yet. Credit packs can be bought once the owner adds the payment keys.</p>)}
+        {me && !me.payments_enabled && (<Notice className="mb-3" data-testid="payments-off-notice">Payments aren't switched on yet. Credit packs can be bought once the owner adds the payment keys.</Notice>)}
         <div className="grid gap-4 sm:grid-cols-3">
           {packs.map((p, i) => <PackCard key={p.id} pack={p} best={i === packs.length - 1} busy={busy === p.id} disabled={!me?.payments_enabled || !!busy} onBuy={buy}/>)}
         </div>
-        {msg && <p data-testid="billing-message" className={`mt-3 text-sm ${msg.ok ? "text-green-700" : "text-red-700"}`}>{msg.text}</p>}
+        {msg && <Notice className="mt-3" tone={msg.ok ? "info" : "error"} data-testid="billing-message">{msg.text}</Notice>}
       </div>
       <ErrorNote error={hist.error}/>
       <div className="grid gap-5 md:grid-cols-2">
@@ -83,7 +91,7 @@ export default function BillingPage() {
               {(hist.data?.purchases ?? []).map((p) => (<tr key={p.order_id} className="border-t border-border first:border-0">
                   <td className="py-2">{p.pack_name} · {p.credits} credits<p className="text-xs text-muted-foreground">{when(p.created_at)}</p></td>
                   <td className="py-2 text-right">{inr(p.amount)}</td>
-                  <td className={`py-2 pl-3 text-right text-xs font-semibold ${p.payment_status === "paid" ? "text-green-700" : p.payment_status === "failed" ? "text-red-700" : "text-muted-foreground"}`}>{p.payment_status}</td>
+                  <td className="py-2 pl-3 text-right text-xs"><PaymentStatus status={p.payment_status}/></td>
                 </tr>))}
             </tbody>
           </table>
@@ -94,7 +102,7 @@ export default function BillingPage() {
             <tbody>
               {(hist.data?.ledger ?? []).map((u, i) => (<tr key={i} className="border-t border-border first:border-0">
                   <td className="py-2">{u.label ?? u.detail}<p className="max-w-xs truncate text-xs text-muted-foreground">{u.label ? u.detail : ""} {when(u.created_at)}</p></td>
-                  <td className={`py-2 text-right font-semibold ${u.credits > 0 ? "text-green-700" : "text-foreground"}`}>{u.credits > 0 ? `+${u.credits}` : u.credits}</td>
+                  <td className="py-2 text-right font-semibold text-foreground">{u.credits > 0 ? `+${u.credits}` : u.credits}</td>
                 </tr>))}
             </tbody>
           </table>
