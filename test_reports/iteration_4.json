@@ -1,0 +1,44 @@
+{
+  "summary": "UX redesign round 1 tested on backend and UI. Almost all requested UI items pass: the sidebar groups, labels and testids; lock tooltips; workspace labels and switching; the top bar credit menu with Buy, waitlist and Plan & billing; metric-detail primary actions (approve, assign owner, none); More actions; the retire and approve panels; the Publish card (downloads, preview code panel, 1 credit per format once in Mine, free in demo); Issues to fix labels and the readable loop detail; ErrorNote for /metrics/m_nope; the billing Paid/Failed/Not completed styles; the renames. Found 1 CRITICAL backend regression in the new HumanizedRoute display-name pass. It rewrites ids inside any string that contains whitespace, so it also changes machine strings. This (a) breaks the Migration plan 'Deprecate and repoint' button: the endpoint becomes 'POST /api/v1/metrics/Revenue APAC/deprecate' and returns 404, and the UI shows the raw text 'Revenue APAC'. (b) It corrupts exported code: the Databricks SQL for m_trade_spend becomes 'NULLIF(Net Revenue (Finance), 0)', which is invalid SQL, and the dbt meta 'metric_id: m_net_rev_fin' becomes 'metric_id: Net Revenue (Finance)'. 15 of the 28 demo export files are changed.",
+  "backend_issues": {
+    "critical": [
+      {"endpoint": "GET /api/v1/conflicts/{id}/plan (via HumanizedRoute)", "issue": "variants[].action.endpoint and steps[].action.endpoint are humanized, e.g. 'POST /api/v1/metrics/Revenue APAC/deprecate'. migration-plan.jsx uses this string for the POST, so it gets 404 {detail:\"'Revenue APAC'\"}. All Deprecate, rename-term and assign-owner execute buttons in the migration plan are broken. This is a regression from iterations 1-3.", "priority": "CRITICAL"},
+      {"endpoint": "GET /api/v1/metrics/{id}/export (via HumanizedRoute)", "issue": "The export 'content' (dbt YAML or Databricks SQL) contains whitespace, so ids inside the code are replaced with display names. m_trade_spend databricks: 'NULLIF(m_net_rev_fin, 0)' becomes 'NULLIF(Net Revenue (Finance), 0)', which is invalid SQL. dbt meta 'metric_id: <id>' becomes the display name in 14 metrics. Reproduce with /app/backend/tests_saas/humanize_export_check.py.", "priority": "HIGH"}
+    ],
+    "minor": [
+      {"endpoint": "HumanizedRoute error path", "issue": "When a humanized id ends up in a URL, the 404 detail is \"'Revenue APAC'\". plainError does not treat it as an id (it contains a space), so users see the raw quoted name. The UI shows this as the button label in the migration plan."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "MigrationPlan execute button", "issue": "Clicking 'Deprecate and repoint tiles to Net Revenue (Finance)' fails, and the button label changes to the raw error \"'Revenue APAC'\" (caused by the backend endpoint humanization). The error is also shown as raw text, not through plainError or Notice.", "selector": "Conflicts page > Migration plan > variant action button", "priority": "HIGH"},
+      {"component": "Sidebar lock Hint tooltip", "issue": "The tooltip stays open after the pointer leaves (still open 1.5s later). The compare-lock tooltip opens upward and covers the 'Ask' nav item, and it blocks the next hover until Escape is pressed.", "selector": "[data-testid=nav-compare-lock]", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Issues to fix filter pills", "issues": ["The 'All issues' pill and the long issue-type pills wrap onto 2 lines at 1920px and look cramped. Consider whitespace-nowrap with horizontal scroll, or shorter labels."]},
+      {"screen": "Metric detail (demo data)", "issues": ["No demo metric meets the primary-approve condition (certification none or pending with score >= 80; the highest is m_fcst_acc at 72.8), so demo users never see 'Approve as official definition'. This was verified only in Mine, after re-ingesting m_gm_fin with certification none and retiring m_gm_supply (score 100)."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests_saas/test_ux_round1_humanize.py", "/app/backend/tests_saas/humanize_export_check.py", "/app/test_reports/pytest/ux_round1.xml"],
+  "action_items": [
+    "Limit HumanizedRoute to user-facing prose. Skip keys such as 'endpoint', 'content', 'formula', 'expr', 'body', 'filename', or keep an allowlist of prose keys (title, explanation, detail, why, reconciliation, label, answer, evidence, fix, note). Alternatively, set a route flag so /export and /conflicts/{id}/plan action blocks are not humanized.",
+    "Re-verify that the migration plan Deprecate, Rename and Assign owner buttons work in the UI after the fix.",
+    "Re-run tests_saas/humanize_export_check.py and expect 'exports changed: 0'.",
+    "MigrationPlan: show execution errors with plainError in a Notice, not as the button label (optional, outside this round's scope).",
+    "Optional: close the Hint tooltip on pointer leave, and set side='right' for the sidebar lock tooltips."
+  ],
+  "critical_code_review_comments": [
+    "humanize.py walk() rewrites every whitespace-containing string, whatever its key. It is a blanket transform over machine-readable payloads (endpoints, code, SQL).",
+    "humanize.py: the _cache key is id(store) plus len(node_names). A renamed node (same count) keeps stale names. id() can be reused after an engine is garbage-collected.",
+    "HumanizedRoute re-serializes the body with json.dumps (default separators) and drops content-length. This is fine, but it is a second serialization on every response.",
+    "Conflicts.jsx: Resolve and Dismiss patch() has no try/catch, so errors fail silently (unchanged this round, as stated)."
+  ],
+  "updated_files": ["/app/backend/tests_saas/test_ux_round1_humanize.py", "/app/backend/tests_saas/humanize_export_check.py"],
+  "success_rate": {"backend": "86% (12/14 in the new suite; the 2 failures are the export corruption. Existing test_workspaces 12/12 passed, restart test not run. test_premium_waitlist errors because the /tmp/wl_api_t2.json fixture file is missing, not a regression)", "frontend": "~93% (all requested items pass except the migration plan regression and the lingering tooltip)"},
+  "seed_data_creation": "Created TEST Clerk users (ux1_*), Mine workspace events and 3 TEST_ payment_transactions for the billing status check. All were deleted by user_id (users, ledger, payments, workspace_events, counters, Clerk). Users created by pytest runs (ux1_a_*, ux1_b_*, ws_*_<run>) remain in Clerk and Mongo, as in previous iterations.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Run `cd /app/backend && /root/.venv/bin/python -m pytest tests_saas/test_ux_round1_humanize.py -n 0`, plus tests_saas/humanize_export_check.py (in-process raw vs humanized export diff). The migration plan check uses the demo /conflicts page: first card '5 definitions of Revenue' > Migration plan > 'Deprecate and repoint' should show 'Done'. Testids verified: nav-*, *-lock, workspace-demo/mine, credit-balance, credits-menu, credits-menu-balance, buy-credits-btn, buy-credits-dialog, buy-credits-close, join-waitlist-btn, waitlist-dialog, menu-plan-billing, primary-approve, approve-panel(-confirm), primary-assign-owner, owner-panel, owner-input, owner-save, action-message, more-actions, action-publish/change-owner/retire, retire-panel, publish-card, download-dbt/databricks, preview-code, preview-dbt/databricks, code-panel, publish-close, technical-definition, score-ring-hint, issue-detail, error-note, payments-off-notice, purchases-table, usage-table. To get primary-approve in Mine: ingest the sample CSVs, re-ingest m_gm_fin with certification none, then deprecate m_gm_supply.",
+  "rca of the issue": "HumanizedRoute.humanize() applies a regex id-to-name substitution to every string value that contains whitespace. The migration-plan action 'endpoint' ('POST /api/v1/metrics/m_rev_apac/deprecate') and the export 'content' (multi-line code) both contain whitespace, so the ids inside them are replaced with display names. The frontend then POSTs to /metrics/Revenue APAC/deprecate and gets 404, and the downloaded SQL is invalid. Reproduce: GET /api/v1/conflicts/C1-g_revenue/plan and look at variants[0].action.endpoint; GET /api/v1/metrics/m_trade_spend/export?format=databricks and look at the expr line. Fix: skip technical keys (endpoint, content, formula, body, expr), or humanize only an allowlist of prose fields."
+}
