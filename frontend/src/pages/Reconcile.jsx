@@ -28,9 +28,10 @@ function ReconcileInner() {
     const metrics = useApi("/metrics");
     const dashes = useApi("/dashboards");
     const [a, setA] = useState(params.get("a") ?? PRESETS[0].a);
-    const [da, setDa] = useState(params.get("dashboard_a") ?? PRESETS[0].da);
-    const [b, setB] = useState(params.get("b") ?? PRESETS[0].b);
-    const [db, setDb] = useState(params.get("dashboard_b") ?? PRESETS[0].db);
+    const fromLink = params.has("a");
+    const [da, setDa] = useState(params.get("dashboard_a") ?? (fromLink ? "" : PRESETS[0].da));
+    const [b, setB] = useState(params.get("b") ?? (params.get("a") === PRESETS[0].b ? PRESETS[0].a : PRESETS[0].b));
+    const [db, setDb] = useState(params.get("dashboard_b") ?? (fromLink ? "" : PRESETS[0].db));
     const [rec, setRec] = useState(null);
     const [err, setErr] = useState(null);
     const sorted = useMemo(() => [...(metrics.data ?? [])].sort((x, y) => x.name.localeCompare(y.name)), [metrics.data]);

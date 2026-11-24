@@ -1,18 +1,34 @@
 # Decision Trust — PRD
 
 ## Original problem statement
-Help me build app from my git repo decision-trust (private repo KaranNMakim/decision-trust). Keep existing features as-is, add sign-in (Google + email/password) and Stripe pay-per-use credits.
+Build the app from the user's git repo decision-trust (KaranNMakim/decision-trust: FastAPI backend + Next.js frontend). Keep existing features and design as-is, and add sign-in (Google + email/password), private per-user data, and pay-per-use credits.
+Later requests: a free Basic plan with basic features outside the paywall; a premium "contact" panel (subject + reason) emailed to karanmakim@outlook.com, changed to "Join premium waitlist".
 
-## Status (June 2026)
-- BLOCKED: repo is private; no GitHub access in this workspace. User chose to connect GitHub to Emergent and start a new task from the repo.
-- Nothing implemented yet.
+## User choices
+- Payments: Razorpay, INR (Stripe test account unavailable for India). Razorpay keys NOT added yet, so payments are disabled.
+- Auth: Emergent-managed Clerk (Google + email/password).
+- Email: Emergent-managed email (Resend), sent to karanmakim@outlook.com.
 
-## Approved plan (Phase 1)
-- Import repo, fix only what blocks running
-- Emergent-managed auth (Google + email/password), per-user data isolation
-- Credits: 3 free on signup; packs 10/$10, 50/$45, 200/$160; 1 credit per main analysis action
-- Stripe claimable sandbox (test mode), billing history page
+## Architecture
+- Backend: /app/backend/server.py (FastAPI) mounts the repo's routes (app/main.py, /api/v1/*), which require sign-in via a router dependency (app/tenancy.py binds each user's own in-memory TrustEngine seeded from data/acme). billing.py handles credits, the ledger and Razorpay orders/verify/webhook. premium.py is the waitlist plus email. clerk_auth.py handles Clerk.
+- Frontend: the Next.js pages were converted to CRA + react-router (src/pages/*). The original design (Tailwind tokens, dt-ui components) is kept. Shell = sidebar + top bar (waitlist, plan badge, credits, Buy, user menu).
+- Mongo: users (credits), credit_ledger, payment_transactions, premium_waitlist.
+
+## Implemented (2026-11-24)
+- Repo ported and running. Sign-in pages. Each user's workspace is private.
+- Basic (free) plan: Trust Index, metrics and scores, conflicts and migration plans, recommendations, Trust Graph, calibration, steward actions, BI file preview.
+- Credits: 3 free at signup. Ask, Reconcile, Ingest CSV, Extract commit and Export each cost 1 credit. At 0 credits the request is refused (402) and the buy dialog opens. Packs: 10 for ₹850, 50 for ₹3,800, 200 for ₹13,500.
+- Plan & billing page: balance, plan cards (Basic / Pay per use / Premium coming soon), packs, purchases, credit activity.
+- Premium waitlist dialog with subject and reason. Each signup is saved and emailed to the owner (limit 3 per day per user).
+- Tests: iteration_1 100%, iteration_2 passed; its reconcile prefill bug and waitlist duplicate issues are fixed.
+
+## Known limits
+- Razorpay keys missing, so Buy is disabled. Owner was asked about UPI options (Razorpay supports UPI) and hasn't answered yet.
+- Workspaces live in memory and reset on backend restart (original repo design). No eviction.
+- Claude explanations are off (no ANTHROPIC_API_KEY), so template answers are used.
+- The original repo tests in backend/tests target the old single-tenant app; the new tests are in backend/tests_saas.
 
 ## Backlog
-- P1: Team accounts with shared credits, owner admin view, low-balance emails/receipts
-- P2: Monthly plans, enterprise invoices, per-action credit pricing
+- P0: Add Razorpay keys to turn on payments (UPI, cards, netbanking).
+- P1: Save workspaces in the database; owner admin view (waitlist, customers, revenue); low-balance emails and receipts.
+- P2: Team accounts with shared credits; monthly plans; per-action credit pricing; turn on Claude explanations.

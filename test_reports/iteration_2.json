@@ -1,0 +1,36 @@
+{
+  "summary": "Iteration 2: Premium waitlist (API + UI) and iteration-1 regression fixes. Backend 12/12 pytest pass (401/422/429, join->GET persistence, email actually sent via Emergent email 202 + email_id stored, waitlist does not spend credits, free browse no spend, ask -1, ingest replace at 0 credits -> 402 with workspace unchanged). UI: top-bar button, dialog prefilled subject, short-reason validation message, buy-dialog link swaps dialogs, Billing premium card COMING SOON + Join waitlist, success message, labels flip to 'On premium waitlist' / 'You're on the waitlist'. Regression: /ask?q runs once, URL cleared to /ask, reload doesn't charge; /reconcile?a&b prefills and does not auto-run. Found one bug: prefilled reconcile uses stale preset dashboards. Only 2 real emails sent (1 API, 1 UI).",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "server.py", "issue": "premium_router was imported and include_router'd twice (duplicate route registration). FIXED by testing agent."},
+      {"endpoint": "POST /api/premium/waitlist", "issue": "Entry is inserted before the email send; if email fails (5xx) the entry stays, user sees an error but GET reports joined=true and it counts toward the 3/day limit. Consider inserting after successful send or marking status=email_failed."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "Reconcile prefill (pages/Reconcile.jsx)", "issue": "When opened via /reconcile?a=..&b=.. (migration-plan links) or /reconcile?a=.. (MetricDetail link) without dashboard_a/dashboard_b, dashboards default to PRESETS[0] (d_sales_qbr / d_board). Select A shows 'Any dashboard' (option not present) but state is d_sales_qbr, so clicking Reconcile errors 'Sales QBR does not show Net Sales (eCom)'. Repro: /reconcile?a=m_net_sales_ecom&b=m_net_rev_fin -> click Reconcile. Fix: when params.get('a')/('b') present, default da/db to params.get('dashboard_a') ?? '' (same for b). No credit was charged on the error (good). Also MetricDetail link passes only a, so b falls back to m_net_rev_fin which may equal a.", "selector": "[data-testid='reconcile-submit']", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Waitlist dialog", "issues": ["After successful join the 'Join waitlist' submit stays enabled with subject retained, and the billing 'You're on the waitlist' button reopens the full form -> easy to send duplicate emails (up to 3/day). Consider showing a joined state / disabling submit after success.", "Dialog state (reason text) persists between opens - minor"]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests_saas/test_premium_waitlist.py", "/app/backend/tests_saas/cleanup_users.py", "/app/test_reports/pytest/pytest_results_iter2.xml"],
+  "action_items": [
+    "Fix Reconcile prefill: default dashboard_a/dashboard_b to '' when a/b come from URL params (migration-plan and MetricDetail links currently error)",
+    "(Minor) Prevent duplicate waitlist submits after success in the dialog",
+    "(Minor) Waitlist: don't persist/count entry if email send fails, or mark it failed"
+  ],
+  "critical_code_review_comments": [
+    "premium.py uses sync pymongo calls inside async def join_waitlist (blocks event loop briefly); use run_in_threadpool or make it def and use sync httpx",
+    "Rate-limit check count_documents + insert_one is non-atomic; concurrent posts could exceed 3/day (low impact)",
+    "update_one to set email_id filters on user_id+created_at instead of the inserted _id; use insert result inserted_id"
+  ],
+  "updated_files": ["/app/backend/server.py", "/app/backend/tests_saas/test_premium_waitlist.py", "/app/backend/tests_saas/cleanup_users.py"],
+  "success_rate": {"backend": "100% (12/12)", "frontend": "95% (all requested flows pass; reconcile prefill dashboard bug)"},
+  "seed_data_creation": "Created Clerk+Mongo users wl_api_t2, wl_ui_t2, wl_reg_t2 (+clerk_test@example.com) and their premium_waitlist rows (incl. 2 directly-inserted TEST_seed rows for 429 test); all deleted by user_id via cleanup_users.py (now also deletes premium_waitlist). 2 real emails sent to karanmakim@outlook.com with TEST_ subjects.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Run: /root/.venv/bin/python /app/scripts/clerk_token.py wl_api_t2+clerk_test@example.com > /tmp/wl_api_t2.json; cd /app/backend && pytest tests_saas/test_premium_waitlist.py -n 0 (sends 1 real email; needs FRESH user). Cleanup: python tests_saas/cleanup_users.py /tmp/wl_*.json. 429 is tested by inserting 2 rows directly into premium_waitlist to avoid extra emails."
+}

@@ -157,8 +157,12 @@ async def join_waitlist(body: PremiumIn, member: dict = Depends(member_dep)):
     doc = {"user_id": member["user_id"], "email": member.get("email"), "subject": body.subject,
            "reason": body.reason, "status": "joined", "created_at": datetime.now(timezone.utc).isoformat()}
     premium_requests.insert_one(doc)
-    email_id = await send_email(to=PREMIUM_REQUEST_EMAIL, subject=f"{EMAIL_FROM_NAME}: new premium waitlist signup",
-                                html=_template(member, body), reply_to=member.get("email"))
+    try:
+        email_id = await send_email(to=PREMIUM_REQUEST_EMAIL, subject=f"{EMAIL_FROM_NAME}: new premium waitlist signup",
+                                    html=_template(member, body), reply_to=member.get("email"))
+    except HTTPException:
+        premium_requests.delete_one({"user_id": member["user_id"], "created_at": doc["created_at"]})
+        raise
     premium_requests.update_one({"user_id": member["user_id"], "created_at": doc["created_at"]},
                                 {"$set": {"email_id": email_id}})
     return {"status": "joined"}
