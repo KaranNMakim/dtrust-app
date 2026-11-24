@@ -1,6 +1,11 @@
-"""Dev helper: create (or reuse) a Clerk test user and print a short-lived session token + sign-in ticket."""
+"""Dev helper: create (or reuse) a Clerk test user and print a short-lived session token + sign-in ticket.
+
+Prints to stdout only. Never redirect the output into a file inside the repo: tokens and tickets are secrets.
+The test user password comes from CLERK_TEST_PASSWORD (or a random one), never from source code.
+"""
 import json
 import os
+import secrets
 import sys
 import urllib.error
 import urllib.parse
@@ -21,7 +26,8 @@ def bapi(path, body=None, method="POST"):
 
 email = sys.argv[1] if len(sys.argv) > 1 else "tester+clerk_test@example.com"
 found = bapi(f"/users?email_address={urllib.parse.quote(email)}", method="GET")
-user = found[0] if found else bapi("/users", {"email_address": [email], "password": "Test-pass-12345!", "skip_password_checks": True})
+user = found[0] if found else bapi("/users", {"email_address": [email], "password": os.environ.get("CLERK_TEST_PASSWORD") or secrets.token_urlsafe(18),
+                                          "skip_password_checks": True})
 session = bapi("/sessions", {"user_id": user["id"]})
 token = bapi(f"/sessions/{session['id']}/tokens", {"expires_in_seconds": 3600})["jwt"]
 ticket = bapi("/sign_in_tokens", {"user_id": user["id"], "expires_in_seconds": 3600})["token"]

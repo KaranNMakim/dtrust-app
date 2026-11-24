@@ -90,3 +90,9 @@ frontend/node_modules/.cache/default-development/0.pack
 credentials.json
 *.key
 .credentials
+
+# Short-lived auth artefacts from test helpers: never commit
+scripts/.ticket
+*.ticket
+*.token
+*.jwt
