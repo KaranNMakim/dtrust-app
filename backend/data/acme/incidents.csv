@@ -1,0 +1,10 @@
+date,metric_id,type,severity,note
+2026-04-12,m_rev_sales,restated,high,Q4 QBR revenue restated after Finance close
+2026-07-09,m_rev_sales,exec_dispute,medium,CEO pulse vs Board pack revenue gap debated for 20 minutes
+2026-05-21,m_gross_rev_mkt,wrong_decision,high,Campaign budget raised on gross revenue that included returns
+2026-08-02,m_gm_supply,restated,high,Margin restated: wrong denominator
+2026-09-15,m_gm_supply,exec_dispute,medium,Ops exec review margin did not match Finance
+2026-06-30,m_otif_cs,exec_dispute,medium,OTIF 94% vs 87% argued in Ops review
+2026-08-18,m_churn_mkt,wrong_decision,medium,Win-back calls targeted active distributors (60-day rule)
+2026-10-06,m_fcst_acc,restated,medium,Forecast accuracy restated after supply mart cycle broke a load
+2026-03-03,m_rev_apac,exec_dispute,low,APAC review revenue lower than group view

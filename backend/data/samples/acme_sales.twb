@@ -1,0 +1,55 @@
+<?xml version='1.0' encoding='utf-8' ?>
+<workbook source-build='2024.2.0' version='18.1' xmlns:user='http://www.tableausoftware.com/xml/user'>
+  <datasources>
+    <datasource caption='CRM Opportunities' name='federated.crm'>
+      <column caption='Revenue' datatype='real' name='[Calculation_101]' role='measure' type='quantitative'>
+        <calculation class='tableau' formula='SUM([Opportunity Amount])' />
+      </column>
+      <column caption='Net Bookings' datatype='real' name='[Calculation_102]' role='measure' type='quantitative'>
+        <calculation class='tableau' formula='[Calculation_101] - SUM([Cancellations])' />
+      </column>
+      <column caption='Win Rate' datatype='real' name='[Calculation_103]' role='measure' type='quantitative'>
+        <calculation class='tableau' formula='COUNTD([Won Opportunity Id]) / COUNTD([Opportunity Id])' />
+      </column>
+      <column caption='Is Strategic' datatype='boolean' name='[Calculation_104]' role='dimension' type='nominal'>
+        <calculation class='tableau' formula='[Account Tier] = "Strategic"' />
+      </column>
+    </datasource>
+  </datasources>
+  <worksheets>
+    <worksheet name='Revenue by Region'>
+      <table>
+        <view>
+          <datasource-dependencies datasource='federated.crm'>
+            <column name='[Calculation_101]' />
+            <column-instance column='[Region]' derivation='None' name='[none:Region:nk]' />
+          </datasource-dependencies>
+          <filter class='categorical' column='[federated.crm].[none:Region:nk]'>
+            <groupfilter function='except' user:ui-domain='database'>
+              <groupfilter function='level-members' level='[none:Region:nk]' />
+              <groupfilter function='member' level='[none:Region:nk]' member='"Exports"' />
+            </groupfilter>
+          </filter>
+        </view>
+      </table>
+    </worksheet>
+    <worksheet name='Pipeline'>
+      <table>
+        <view>
+          <datasource-dependencies datasource='federated.crm'>
+            <column name='[Calculation_102]' />
+            <column name='[Calculation_103]' />
+          </datasource-dependencies>
+        </view>
+      </table>
+    </worksheet>
+  </worksheets>
+  <dashboards>
+    <dashboard name='Sales QBR (Tableau)'>
+      <zones>
+        <zone name='Revenue by Region' />
+        <zone name='Pipeline' />
+      </zones>
+    </dashboard>
+  </dashboards>
+</workbook>

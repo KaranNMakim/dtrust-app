@@ -1,0 +1,8 @@
+period,column,value,unit,source,note
+2026-10,invoice_amount,1240.0,INR crore,SAP S/4HANA,Invoiced sales by invoice date (fiscal Oct)
+2026-10,returns,38.5,INR crore,SAP S/4HANA,Credit notes for returns
+2026-10,discounts,52.0,INR crore,SAP S/4HANA,On-invoice and off-invoice discounts
+2026-10,rebates,21.5,INR crore,SAP S/4HANA,Distributor rebates accrued
+2026-10,opportunity_amount,1316.0,INR crore,Salesforce,Closed-won bookings by close date
+2026-10,order_value,214.0,INR crore,Shopify Plus,Gross eCom order value by order date
+2026-10,refunds,9.8,INR crore,Shopify Plus,eCom refunds

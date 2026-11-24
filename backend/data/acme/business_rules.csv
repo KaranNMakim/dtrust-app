@@ -1,0 +1,4 @@
+rule_id,name,description,severity
+discount_over_20pct_without_approval,Discount cap,Discounts above 20% need RGM director approval,critical
+out_of_stock_sku,No out-of-stock SKUs,Never recommend promotion on an SKU with under 2 weeks of cover,critical
+credit_limit_breach,Credit policy,Credit extensions above INR 50 lakh need CFO approval,warning

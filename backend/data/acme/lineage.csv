@@ -1,0 +1,11 @@
+from_type,from_id,from_name,relation,to_type,to_id,to_name,documented
+DataProduct,dp_rev_mart,Revenue Mart,DEPENDS_ON,DataProduct,dp_ledger,Finance Ledger,true
+DataProduct,dp_ledger,Finance Ledger,DEPENDS_ON,SourceSystem,src_sap,SAP S/4HANA,true
+DataProduct,dp_crm_mart,CRM Mart,DEPENDS_ON,SourceSystem,src_sfdc,Salesforce,false
+DataProduct,dp_ecom,eCom Orders,DEPENDS_ON,SourceSystem,src_shopify,Shopify Plus,true
+DataProduct,dp_supply,Supply Mart,DEPENDS_ON,SourceSystem,src_o9,o9 Planning,true
+DataProduct,dp_supply,Supply Mart,DEPENDS_ON,DataProduct,dp_rev_mart,Revenue Mart,false
+DataProduct,dp_demand,Demand Forecast DP,DEPENDS_ON,DataProduct,dp_supply,Supply Mart,true
+DataProduct,dp_rgm,RGM Mart,DEPENDS_ON,DataProduct,dp_demand,Demand Forecast DP,true
+DataProduct,dp_supply,Supply Mart,DEPENDS_ON,DataProduct,dp_rgm,RGM Mart,false
+DataProduct,dp_rgm,RGM Mart,DEPENDS_ON,SourceSystem,src_nielsen,Nielsen Retail,true

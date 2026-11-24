@@ -1,57 +1,52 @@
-import { useEffect } from "react";
-import "@/App.css";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import axios from "axios";
-import { HOME } from "@/constants/testIds";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { Show } from "@clerk/react";
+import ClerkAuthProvider from "@/components/auth/ClerkAuthProvider";
+import { AuthedShell } from "@/components/app-shell";
+import { SignInPage, SignUpPage } from "@/pages/Auth";
+import Home from "@/pages/Home";
+import Ask from "@/pages/Ask";
+import Reconcile from "@/pages/Reconcile";
+import Metrics from "@/pages/Metrics";
+import MetricDetail from "@/pages/MetricDetail";
+import Conflicts from "@/pages/Conflicts";
+import Recommendations from "@/pages/Recommendations";
+import Graph from "@/pages/Graph";
+import Calibration from "@/pages/Calibration";
+import Ingest from "@/pages/Ingest";
+import Billing from "@/pages/Billing";
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-const API = `${BACKEND_URL}/api`;
-
-const Home = () => {
-  const helloWorldApi = async () => {
-    try {
-      const response = await axios.get(`${API}/`);
-      console.log(response.data.message);
-    } catch (e) {
-      console.error(e, `errored out requesting / api`);
-    }
-  };
-
-  useEffect(() => {
-    helloWorldApi();
-  }, []);
-
+function Protected() {
   return (
-    // The marker attribute below lets the platform probe detect the stock splash — remove it with this page
-    <div data-emergent-splash>
-      <header className="App-header">
-        <a
-          data-testid={HOME.emergentLink}
-          className="App-link"
-          href="https://emergent.sh"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <img src="https://avatars.githubusercontent.com/in/1201222?s=120&u=2686cf91179bbafbc7a71bfbc43004cf9ae1acea&v=4" />
-        </a>
-        <p className="mt-5">Building something incredible ~!</p>
-      </header>
-    </div>
-  );
-};
-
-function App() {
-  return (
-    <div className="App">
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Home />}>
-            <Route index element={<Home />} />
-          </Route>
-        </Routes>
-      </BrowserRouter>
-    </div>
+    <>
+      <Show when="signed-in"><AuthedShell /></Show>
+      <Show when="signed-out"><Navigate to="/sign-in" replace /></Show>
+    </>
   );
 }
 
-export default App;
+export default function App() {
+  return (
+    <BrowserRouter>
+      <ClerkAuthProvider>
+        <Routes>
+          <Route path="/sign-in/*" element={<SignInPage />} />
+          <Route path="/sign-up/*" element={<SignUpPage />} />
+          <Route element={<Protected />}>
+            <Route path="/" element={<Home />} />
+            <Route path="/ask" element={<Ask />} />
+            <Route path="/reconcile" element={<Reconcile />} />
+            <Route path="/metrics" element={<Metrics />} />
+            <Route path="/metrics/:id" element={<MetricDetail />} />
+            <Route path="/conflicts" element={<Conflicts />} />
+            <Route path="/recommendations" element={<Recommendations />} />
+            <Route path="/graph" element={<Graph />} />
+            <Route path="/calibration" element={<Calibration />} />
+            <Route path="/ingest" element={<Ingest />} />
+            <Route path="/billing" element={<Billing />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Route>
+        </Routes>
+      </ClerkAuthProvider>
+    </BrowserRouter>
+  );
+}

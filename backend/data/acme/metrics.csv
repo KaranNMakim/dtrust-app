@@ -1,0 +1,15 @@
+metric_id,name,formula,grain,owner_email,team,glossary_term,data_product,certification,refresh_sla_h,last_refreshed,time_basis,calendar,currency,hierarchy_version
+m_net_rev_fin,Net Revenue (Finance),SUM(invoice_amount)-SUM(returns)-SUM(discounts)-SUM(rebates),daily,meera.iyer@acme.com,Group Finance BI,g_revenue,dp_rev_mart,certified,24,2026-11-22T07:00:00Z,invoice_date,fiscal,INR,h2026.2
+m_rev_sales,Revenue (Sales),SUM(opportunity_amount) WHERE stage='Closed Won',daily,rohit.k@acme.com,Sales Ops,g_revenue,dp_crm_mart,none,24,2026-11-22T04:00:00Z,close_date,fiscal,INR,h2026.1
+m_gross_rev_mkt,Gross Revenue (Marketing),SUM(order_value),weekly,,Marketing Analytics,g_revenue,dp_ecom,none,168,2026-11-08T00:00:00Z,order_date,calendar,INR,h2026.2
+m_rev_apac,Revenue APAC,SUM(invoice_amount)-SUM(returns),daily,li.wei@acme.com,APAC Finance,g_revenue,dp_rev_mart,none,24,2026-11-21T23:00:00Z,invoice_date,fiscal,USD,h2026.2
+m_net_sales_ecom,Net Sales (eCom),SUM(order_value)-SUM(refunds),daily,priya.n@acme.com,Digital Commerce,g_revenue,dp_ecom,none,24,2026-11-22T06:00:00Z,order_date,calendar,INR,h2026.2
+m_gm_fin,Gross Margin % (Finance),(net_revenue-cogs)/net_revenue,monthly,meera.iyer@acme.com,Group Finance BI,g_gm,dp_rev_mart,certified,720,2026-11-01T00:00:00Z,invoice_date,fiscal,INR,h2026.2
+m_gm_supply,Gross Margin % (Supply),(gross_revenue-std_cost)/gross_revenue,monthly,,Supply Chain Analytics,g_gm,dp_supply,none,720,2026-10-01T00:00:00Z,ship_date,calendar,INR,h2025.4
+m_otif_sc,OTIF,COUNT(on_time AND in_full)/COUNT(orders),daily,sanjay.rao@acme.com,Supply Chain Analytics,g_otif,dp_supply,certified,24,2026-11-22T05:00:00Z,requested_date,fiscal,,h2026.2
+m_otif_cs,OTIF (Customer Service),COUNT(on_time)/COUNT(orders),daily,kavya.m@acme.com,Customer Service,g_otif,dp_supply,none,24,2026-11-22T05:00:00Z,ship_date,calendar,,h2026.2
+m_churn_sales,Distributor Churn,COUNT(no_order_90d)/COUNT(active_accounts),monthly,anita.d@acme.com,Sales Ops,g_churn,dp_crm_mart,none,720,2026-11-01T00:00:00Z,order_date,fiscal,,h2026.2
+m_churn_mkt,Churn Rate,COUNT(no_order_60d)/COUNT(all_accounts),monthly,,Marketing Analytics,g_churn,dp_ecom,none,720,2026-09-30T00:00:00Z,order_date,calendar,,h2026.1
+m_fcst_acc,Forecast Accuracy,1-MAPE(forecast_qty;actual_qty),weekly,sanjay.rao@acme.com,Demand Planning,g_fcst_acc,dp_demand,none,168,2026-11-17T00:00:00Z,week_start,fiscal,,h2026.2
+m_trade_spend,Trade Spend % of Revenue,SUM(trade_spend)/m_net_rev_fin,monthly,arvind.s@acme.com,Revenue Growth Mgmt,,dp_rgm,none,720,2026-11-01T00:00:00Z,invoice_date,fiscal,INR,h2026.2
+m_promo_roi,Promo ROI,(incremental_gm-promo_cost)/promo_cost,weekly,arvind.s@acme.com,Revenue Growth Mgmt,,dp_rgm,none,168,2026-11-17T00:00:00Z,promo_week,fiscal,INR,h2026.2

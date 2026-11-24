@@ -1,0 +1,2 @@
+period,metric_id,dashboard_id,expression,excluded_value,note
+2026-10,m_rev_sales,d_sales_qbr,region<>'Exports',64.0,Exports excluded on Sales QBR only

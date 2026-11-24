@@ -1,0 +1,6 @@
+term_id,term,definition,steward_email,required_components,synonyms
+g_revenue,Revenue,"Recognised net revenue: invoiced amount less returns, discounts and rebates, per IFRS 15",meera.iyer@acme.com,invoice_amount|returns|discounts|rebates,revenue|sales|net sales|turnover
+g_gm,Gross Margin %,"(Net Revenue - COGS) / Net Revenue",meera.iyer@acme.com,net_revenue|cogs,gross margin|margin|gm
+g_otif,OTIF,"Share of orders delivered on time and in full against customer requested date",sanjay.rao@acme.com,on_time|in_full,otif|on time in full|delivery performance
+g_churn,Customer Churn,"Share of active distributor accounts with no order in 90 days",anita.d@acme.com,no_order_90d|active_accounts,churn|attrition|customer churn
+g_fcst_acc,Forecast Accuracy,"1 - MAPE of SKU-week demand forecast",sanjay.rao@acme.com,mape,forecast accuracy|forecast|mape
