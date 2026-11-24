@@ -10,7 +10,7 @@ function Side() {
           Trust scores for every metric and AI recommendation, a numeric bridge between conflicting dashboards, and migration plans that publish the winning definition.
         </p>
         <ul className="space-y-2 text-sm">
-          {["Free Basic plan: explore the Trust Index, metrics, conflicts and the Trust Graph", "3 free credits to ask, reconcile and publish", "Your workspace is private to you"].map((t) => (<li key={t} className="flex items-start gap-2"><ShieldCheck className="mt-0.5 h-4 w-4 text-primary"/>{t}</li>))}
+          {["Free Acme demo: try every feature on a sample company", "Your own workspace, saved and private to you", "3 free credits to start on your own data"].map((t) => (<li key={t} className="flex items-start gap-2"><ShieldCheck className="mt-0.5 h-4 w-4 text-primary"/>{t}</li>))}
         </ul>
       </div>
       <p className="text-xs text-muted-foreground">A credit score for enterprise knowledge.</p>

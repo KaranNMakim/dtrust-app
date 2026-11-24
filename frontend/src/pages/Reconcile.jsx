@@ -1,4 +1,5 @@
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
+import { CostTag, useWorkspace } from "@/lib/workspace";
 import { useSearchParams } from "react-router-dom";
 import { api, useApi } from "@/lib/api";
 import { Button, Card, ErrorNote } from "@/components/dt-ui";
@@ -34,7 +35,15 @@ function ReconcileInner() {
     const [db, setDb] = useState(params.get("dashboard_b") ?? (fromLink ? "" : PRESETS[0].db));
     const [rec, setRec] = useState(null);
     const [err, setErr] = useState(null);
+    const { ws } = useWorkspace();
     const sorted = useMemo(() => [...(metrics.data ?? [])].sort((x, y) => x.name.localeCompare(y.name)), [metrics.data]);
+    useEffect(() => {
+        if (!sorted.length || sorted.some((m) => m.id === a))
+            return;
+        setA(sorted[0].id); setDa("");
+        setB((sorted[1] ?? sorted[0]).id); setDb("");
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [sorted]);
     async function run(pa = a, pda = da, pb = b, pdb = db) {
         setErr(null);
         const q = new URLSearchParams({ a: pa, b: pb, ...(pda ? { dashboard_a: pda } : {}), ...(pdb ? { dashboard_b: pdb } : {}) });
@@ -52,14 +61,14 @@ function ReconcileInner() {
         <p className="text-sm text-muted-foreground">Pick two tiles. Decision Trust lists every structural difference and bridges one number to the other.</p>
       </header>
       <div className="flex flex-wrap gap-2">
-        {PRESETS.map((p) => (<button key={p.label} data-testid="reconcile-preset" title="Uses 1 credit" className="rounded-full border border-border bg-white px-3 py-1 text-xs hover:bg-muted" onClick={() => { setA(p.a); setDa(p.da); setB(p.b); setDb(p.db); run(p.a, p.da, p.b, p.db); }}>
+        {ws === "demo" && PRESETS.map((p) => (<button key={p.label} data-testid="reconcile-preset" className="rounded-full border border-border bg-white px-3 py-1 text-xs hover:bg-muted" onClick={() => { setA(p.a); setDa(p.da); setB(p.b); setDb(p.db); run(p.a, p.da, p.b, p.db); }}>
             {p.label}
           </button>))}
       </div>
       <Card className="flex flex-col gap-4 md:flex-row md:items-end">
         <Picker label="Number A" metric={a} dash={da} metrics={sorted} dashes={dashes.data ?? []} onMetric={setA} onDash={setDa}/>
         <Picker label="Number B" metric={b} dash={db} metrics={sorted} dashes={dashes.data ?? []} onMetric={setB} onDash={setDb}/>
-        <Button data-testid="reconcile-submit" className="h-10 whitespace-nowrap" onClick={() => run()}>Reconcile <span className="text-xs opacity-80">· 1 credit</span></Button>
+        <Button data-testid="reconcile-submit" className="h-10 whitespace-nowrap" onClick={() => run()}>Reconcile <CostTag/></Button>
       </Card>
       <ErrorNote error={err ?? metrics.error}/>
       {rec && <ReconcileView rec={rec}/>}

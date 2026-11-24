@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { getWorkspace } from "@/lib/workspace";
 
 export const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 export const API = `${BACKEND_URL}/api/v1`;
@@ -11,7 +12,7 @@ export function setTokenGetter(fn) {
 
 export async function authHeaders() {
     const token = await tokenGetter();
-    return token ? { Authorization: `Bearer ${token}` } : {};
+    return { "X-Workspace": getWorkspace(), ...(token ? { Authorization: `Bearer ${token}` } : {}) };
 }
 
 export function notifyCreditsChanged() {

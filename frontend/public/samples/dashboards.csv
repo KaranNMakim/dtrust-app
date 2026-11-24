@@ -1,0 +1,13 @@
+dashboard_id,name,tool,audience,owner_email,monthly_viewers,metrics,local_overrides
+d_board,Board Pack - Monthly,Power BI,exec,meera.iyer@acme.com,40,m_net_rev_fin|m_gm_fin|m_otif_sc,
+d_ceo,CEO Weekly Pulse,Power BI,exec,meera.iyer@acme.com,25,m_net_rev_fin|m_rev_sales|m_otif_sc|m_churn_sales,
+d_sales_qbr,Sales QBR,Tableau,exec,rohit.k@acme.com,180,m_rev_sales|m_churn_sales|m_trade_spend,m_rev_sales:region<>'Exports'
+d_sales_pipe,Pipeline Tracker,Tableau,department,rohit.k@acme.com,320,m_rev_sales,
+d_apac,APAC Business Review,Power BI,department,li.wei@acme.com,90,m_rev_apac|m_gm_fin,
+d_mkt_perf,Marketing Performance,Looker,department,,150,m_gross_rev_mkt|m_churn_mkt|m_promo_roi,
+d_ecom,eCom Daily,Looker,team,priya.n@acme.com,60,m_net_sales_ecom|m_gross_rev_mkt,
+d_supply,Supply Chain Control Tower,Power BI,department,sanjay.rao@acme.com,210,m_otif_sc|m_fcst_acc|m_gm_supply,
+d_cs,Customer Service Scorecard,Tableau,team,kavya.m@acme.com,45,m_otif_cs,
+d_rgm,RGM Promo Planner,Power BI,department,arvind.s@acme.com,75,m_trade_spend|m_promo_roi|m_rev_sales,
+d_ops_exec,Ops Exec Review,Power BI,exec,sanjay.rao@acme.com,30,m_otif_cs|m_gm_supply|m_gross_rev_mkt,
+d_finance_close,Month-End Close,Power BI,department,meera.iyer@acme.com,55,m_net_rev_fin|m_gm_fin|m_rev_apac,

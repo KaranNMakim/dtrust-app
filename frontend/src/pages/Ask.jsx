@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { Suspense, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { api } from "@/lib/api";
+import { CostTag, useWorkspace } from "@/lib/workspace";
 import { Button, Card, CardTitle, CertBadge, ComponentBars, ErrorNote, Input, ScorePill, ScoreRing } from "@/components/dt-ui";
 import { ReconcileView } from "@/components/reconcile-view";
 const SUGGESTIONS = [
@@ -14,6 +15,7 @@ const SUGGESTIONS = [
 ];
 function AskInner() {
     const [params, setParams] = useSearchParams();
+    const { ws } = useWorkspace();
     const [q, setQ] = useState(params.get("q") ?? SUGGESTIONS[0]);
     const [res, setRes] = useState(null);
     const [err, setErr] = useState(null);
@@ -45,10 +47,10 @@ function AskInner() {
     return (<div className="mx-auto max-w-4xl space-y-5">
       <form className="flex gap-3" onSubmit={(e) => { e.preventDefault(); run(q); }}>
         <Input data-testid="ask-input" value={q} onChange={(e) => setQ(e.target.value)}/>
-        <Button data-testid="ask-submit" type="submit" className="h-11 whitespace-nowrap" disabled={busy}>{busy ? "Thinking…" : <>Ask <span className="text-xs opacity-80">· 1 credit</span></>}</Button>
+        <Button data-testid="ask-submit" type="submit" className="h-11 whitespace-nowrap" disabled={busy}>{busy ? "Thinking…" : <>Ask <CostTag/></>}</Button>
       </form>
       <div className="flex flex-wrap gap-2">
-        {SUGGESTIONS.map((s) => (<button key={s} data-testid="ask-suggestion" title="Uses 1 credit" onClick={() => { setQ(s); run(s); }} className="rounded-full border border-border bg-white px-3 py-1 text-xs hover:bg-muted">
+        {ws === "demo" && SUGGESTIONS.map((s) => (<button key={s} data-testid="ask-suggestion" onClick={() => { setQ(s); run(s); }} className="rounded-full border border-border bg-white px-3 py-1 text-xs hover:bg-muted">
             {s}
           </button>))}
       </div>

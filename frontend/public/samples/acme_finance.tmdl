@@ -1,0 +1,30 @@
+table Sales
+	lineageTag: 4f1c2a10-0000-0000-0000-000000000001
+
+	/// Recognised net revenue per IFRS 15. Owned by Group Finance BI.
+	measure 'Net Revenue' = SUM(Sales[invoice_amount]) - SUM(Sales[returns]) - [Total Discounts] - SUM(Sales[rebates])
+		formatString: #,0.0
+		displayFolder: Finance
+
+	measure 'Total Discounts' = SUM(Sales[discounts])
+		formatString: #,0.0
+		displayFolder: Finance
+
+	measure 'Domestic Revenue' =
+			CALCULATE(
+				[Net Revenue],
+				Sales[region] <> "Exports",  // board asked for domestic view
+				KEEPFILTERS(Sales[channel] = "GT")
+			)
+		formatString: #,0.0
+
+	measure 'Gross Margin %' = DIVIDE([Net Revenue] - SUM(Sales[cogs]), [Net Revenue])
+		formatString: 0.0%
+
+	measure 'Active Distributors' = DISTINCTCOUNT(Sales[distributor_id])
+
+	measure _Helper = 1
+
+table Orders
+	measure OTIF = DIVIDE(CALCULATE(COUNTROWS(Orders), Orders[on_time] = TRUE() && Orders[in_full] = TRUE()), COUNTROWS(Orders))
+		formatString: 0.0%

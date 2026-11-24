@@ -24,8 +24,8 @@ from .config import settings
 from .engine import ActionError, TrustEngine, conflict_dict, score_dict
 from .llm import ClaudeGateway
 from .store import Store
-from .tenancy import bind_user, current_email, engine, engine_user_id, llm, user_ask_log
-from billing import ensure_member, require_credit, spend_credit
+from .tenancy import (apply_extract, apply_ingest, bind_user, charge, current_email, current_workspace, engine, llm,
+                      own_data_only, paid_action, record, user_ask_log)
 
 log = logging.getLogger("decision_trust")
 logging.basicConfig(level=logging.INFO)
@@ -58,7 +58,7 @@ def _sync_graph() -> None:
 @router.get("/api/v1/health")
 def health():
     return {"status": "ok", "version": __version__, "claude": llm.enabled, "neo4j": neo4j_graph is not None,
-            "metrics": len(engine.store.metrics)}
+            "metrics": len(engine.store.metrics), "workspace": current_workspace()}
 
 
 @router.get("/api/v1/index")
@@ -140,6 +140,7 @@ def _act(fn, *args, **kwargs):
     except ActionError as exc:
         raise problem(422, "Action not allowed", str(exc)) from exc
     _sync_graph()
+    record("action", {"method": fn.__name__, "args": list(args), "kwargs": kwargs})
     return out
 
 
@@ -171,10 +172,10 @@ def rename_term(metric_id: str, body: RenameBody, who: str = Depends(actor)):
 
 
 @router.get("/api/v1/metrics/{metric_id}/export")
-def export_metric(metric_id: str, format: Literal["dbt", "databricks"] = "dbt", uid: str = Depends(require_credit)):
+def export_metric(metric_id: str, format: Literal["dbt", "databricks"] = "dbt", uid: str | None = Depends(paid_action)):
     _metric_or_404(metric_id)
     out = exporter.export(engine.store, metric_id, format)
-    spend_credit(uid, "export", f"{engine.store.name_of(metric_id)} ({format})")
+    charge(uid, "export", f"{engine.store.name_of(metric_id)} ({format})")
     return out
 
 
@@ -191,11 +192,11 @@ def list_dashboards():
 
 @router.get("/api/v1/reconcile")
 def reconcile(a: str, b: str, dashboard_a: str | None = None, dashboard_b: str | None = None,
-              period: str | None = None, uid: str = Depends(require_credit)):
+              period: str | None = None, uid: str | None = Depends(paid_action)):
     """Why do two numbers disagree? Causes by category plus a numeric bridge when component values exist."""
     try:
         out = run_reconcile(engine.store, a, b, dashboard_a or None, dashboard_b or None, period)
-        spend_credit(uid, "reconcile", f"{engine.store.name_of(a)} vs {engine.store.name_of(b)}")
+        charge(uid, "reconcile", f"{engine.store.name_of(a)} vs {engine.store.name_of(b)}")
         return out
     except KeyError as exc:
         raise problem(404, "Not found", str(exc)) from exc
@@ -313,9 +314,9 @@ class AskBody(BaseModel):
 
 
 @router.post("/api/v1/ask")
-def ask(body: AskBody, who: str = Depends(actor), uid: str = Depends(require_credit)):
+def ask(body: AskBody, who: str = Depends(actor), uid: str | None = Depends(paid_action)):
     out = run_ask(engine, body.question, llm)
-    spend_credit(uid, "ask", body.question)
+    charge(uid, "ask", body.question)
     user_ask_log().append({"answer_id": out["answer_id"], "user": who, "question": body.question,
                     "intent": out["intent"], "citations": out.get("citations", []),
                     "latency_ms": out["latency_ms"], "feedback": 0})
@@ -337,13 +338,6 @@ def ask_feedback(answer_id: str, body: FeedbackBody):
 
 # ---------------------------------------------------------------- ingest & admin
 
-INGEST_LOADERS = {
-    "glossary": ("glossary", "add_glossary"),
-    "metric": ("metrics", "add_metric"),
-    "dashboard": ("dashboards", "add_dashboard"),
-    "lineage": ("lineage", "add_lineage"),
-    "recommendation": ("recommendations", "add_recommendation"),
-}
 REQUIRED_COLUMNS = {
     "glossary": {"term_id", "term", "definition"},
     "metric": {"metric_id", "name", "formula"},
@@ -356,7 +350,9 @@ REQUIRED_COLUMNS = {
 @router.post("/api/v1/ingest/{source_type}")
 async def ingest(source_type: Literal["glossary", "metric", "dashboard", "lineage", "recommendation"],
                  file: UploadFile = File(...), mode: Literal["upsert", "replace"] = "upsert",
-                 who: str = Depends(actor), uid: str = Depends(require_credit)):
+                 who: str = Depends(actor)):
+    own_data_only()
+    uid = paid_action()
     text = (await file.read()).decode("utf-8-sig")
     rows = list(csv.DictReader(io.StringIO(text)))
     if not rows:
@@ -364,19 +360,10 @@ async def ingest(source_type: Literal["glossary", "metric", "dashboard", "lineag
     missing = REQUIRED_COLUMNS[source_type] - set(rows[0].keys())
     if missing:
         raise problem(422, "Missing columns", ", ".join(sorted(missing)))
-    attr, loader = INGEST_LOADERS[source_type]
     store = engine.store
-    spend_credit(uid, "ingest", f"{source_type}: {file.filename}")
-    if mode == "replace":
-        current = getattr(store, attr)
-        current.clear()
-    errors, ok = [], 0
-    for i, r in enumerate(rows, start=2):
-        try:
-            getattr(store, loader)(r)
-            ok += 1
-        except Exception as exc:  # noqa: BLE001
-            errors.append({"row": i, "error": str(exc)})
+    charge(uid, "ingest", f"{source_type}: {file.filename}")
+    ok, errors = apply_ingest(engine, source_type, rows, mode)
+    record("ingest", {"source_type": source_type, "rows": rows, "mode": mode})
     summary = engine.recompute()
     _sync_graph()
     store.audit.append({"actor": who, "action": f"ingest_{source_type}", "entity_id": file.filename,
@@ -387,9 +374,11 @@ async def ingest(source_type: Literal["glossary", "metric", "dashboard", "lineag
 @router.post("/api/v1/extract/{tool}")
 async def extract(tool: Literal["powerbi", "tableau"], file: UploadFile = File(...), commit: bool = False,
                   dashboard: str | None = None, who: str = Depends(actor)):
-    """Preview is free; commit=true uses one credit."""
+    """Preview is free; commit=true uses one credit (own workspace only)."""
+    uid = None
     if commit:
-        require_credit(ensure_member(engine_user_id()))
+        own_data_only()
+        uid = paid_action()
     """Read metric definitions from a Power BI model (.tmdl / model.bim) or Tableau workbook (.twb / .twbx).
     commit=false returns a preview; commit=true adds them to the workspace and recomputes."""
     data = await file.read()
@@ -403,11 +392,9 @@ async def extract(tool: Literal["powerbi", "tableau"], file: UploadFile = File(.
         raise problem(422, "Could not read file", str(exc)) from exc
     out = res.to_dict()
     if commit:
-        spend_credit(engine_user_id(), "extract", name)
-        for row in res.metrics:
-            engine.store.add_metric(row)
-        for row in res.dashboards:
-            engine.store.add_dashboard(row)
+        charge(uid, "extract", name)
+        apply_extract(engine, res.metrics, res.dashboards)
+        record("extract", {"metrics": res.metrics, "dashboards": res.dashboards})
         out["summary"] = engine.recompute()
         _sync_graph()
         engine.store.audit.append({"actor": who, "action": f"extract_{tool}", "entity_id": name, "reason": None,

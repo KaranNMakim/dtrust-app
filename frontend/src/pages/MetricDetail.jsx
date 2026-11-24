@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { useParams } from "react-router-dom";
 import { useState } from "react";
 import { api, useApi } from "@/lib/api";
+import { CostTag } from "@/lib/workspace";
 import { Button, Card, CardTitle, CertBadge, ComponentBars, ErrorNote, Input, ScoreRing } from "@/components/dt-ui";
 export default function MetricDetail() {
     const { id } = useParams();
@@ -74,7 +75,7 @@ export default function MetricDetail() {
                 {msg && <p className="text-xs text-muted-foreground">{msg}</p>}
               </Card>
               <Card className="space-y-2">
-                <CardTitle>Publish to the semantic layer <span className="font-normal">· 1 credit</span></CardTitle>
+                <CardTitle>Publish to the semantic layer <CostTag/></CardTitle>
                 <div className="flex gap-2">
                   <Button variant="outline" className="flex-1" data-testid="export-dbt" onClick={() => doExport("dbt")}>dbt MetricFlow</Button>
                   <Button variant="outline" className="flex-1" data-testid="export-databricks" onClick={() => doExport("databricks")}>Databricks</Button>

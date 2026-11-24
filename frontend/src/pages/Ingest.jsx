@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { API, authHeaders, notifyCreditsChanged } from "@/lib/api";
+import { useWorkspace } from "@/lib/workspace";
 import { Button, Card, CardTitle } from "@/components/dt-ui";
 const TYPES = [
     { key: "glossary", label: "Business glossary", cols: "term_id, term, definition, steward_email, required_components, synonyms" },
@@ -9,6 +10,7 @@ const TYPES = [
     { key: "recommendation", label: "AI recommendations", cols: "rec_id, model, version, title, raw_confidence, input_features, evidence, rationale, accepted_90d, success_90d, rule_violations" },
 ];
 function BiExtract() {
+    const { ws } = useWorkspace();
     const [tool, setTool] = useState("powerbi");
     const [file, setFile] = useState(null);
     const [res, setRes] = useState(null);
@@ -35,7 +37,9 @@ function BiExtract() {
       <CardTitle className="text-foreground">Read definitions straight from your BI files</CardTitle>
       <p className="text-xs text-muted-foreground">
         Power BI: a .tmdl file or model.bim from a project folder. Tableau: a .twb or .twbx workbook. Measures, calculated
-        fields and worksheet filters become governed metrics. Try the samples in backend/data/samples.
+        fields and worksheet filters become governed metrics. Try a sample:{" "}
+        <a data-testid="sample-powerbi" className="text-primary underline" href="/samples/acme_finance.tmdl" download>Power BI model</a>{" · "}
+        <a data-testid="sample-tableau" className="text-primary underline" href="/samples/acme_sales.twb" download>Tableau workbook</a>.
       </p>
       <div className="flex flex-wrap items-center gap-3">
         <select className="h-9 rounded-md border border-border px-2 text-sm" value={tool} onChange={(e) => setTool(e.target.value)}>
@@ -44,7 +48,7 @@ function BiExtract() {
         </select>
         <input type="file" accept=".tmdl,.bim,.json,.twb,.twbx" onChange={(e) => setFile(e.target.files?.[0] ?? null)} className="text-sm"/>
         <Button data-testid="extract-preview" variant="outline" onClick={() => send(false)} disabled={!file}>Preview · free</Button>
-        <Button data-testid="extract-commit" onClick={() => send(true)} disabled={!file}>Add to workspace · 1 credit</Button>
+        <Button data-testid="extract-commit" onClick={() => send(true)} disabled={!file || ws === "demo"}>Add to my workspace · 1 credit</Button>
       </div>
       {err && <p className="text-xs text-red-700">{err}</p>}
       {res && (<div className="space-y-2 text-xs">
@@ -65,7 +69,18 @@ function BiExtract() {
         </div>)}
     </Card>);
 }
+function DemoNotice() {
+    const { ws, setWs } = useWorkspace();
+    if (ws !== "demo")
+        return null;
+    return (<div data-testid="ingest-demo-notice" className="flex items-center justify-between gap-4 rounded-md border border-primary/30 bg-primary/5 px-4 py-3 text-sm">
+      <span>You&apos;re in the Acme demo, which is read-only for new data. Your own data goes in <b>My workspace</b>, where it&apos;s saved. Previewing a BI file stays free.</span>
+      <Button data-testid="ingest-switch-mine" className="shrink-0" onClick={() => setWs("mine")}>Switch to My workspace</Button>
+    </div>);
+}
+
 export default function IngestPage() {
+    const { ws } = useWorkspace();
     const [result, setResult] = useState({});
     async function upload(type, file, mode) {
         if (!file)
@@ -85,15 +100,17 @@ export default function IngestPage() {
     }
     return (<div className="mx-auto max-w-4xl space-y-4">
       <h1 className="text-2xl font-semibold">Ingest metadata</h1>
-      <p className="text-sm text-muted-foreground">Metadata only: no row-level data ever leaves your systems. Scores recompute after every upload. Each upload uses 1 credit.</p>
+      <p className="text-sm text-muted-foreground">Metadata only: no row-level data ever leaves your systems. Scores recompute after every upload. Each upload uses 1 credit and is saved to your workspace.</p>
+      <DemoNotice />
       <BiExtract />
       {TYPES.map((t) => (<Card key={t.key} className="space-y-2">
           <CardTitle className="text-foreground">{t.label}</CardTitle>
           <p className="font-mono text-xs text-muted-foreground">{t.cols}</p>
+          <a data-testid={`sample-csv-${t.key}`} className="text-xs text-primary underline" href={`/samples/${{ glossary: "glossary", metric: "metrics", dashboard: "dashboards", lineage: "lineage", recommendation: "recommendations" }[t.key]}.csv`} download>Download example CSV</a>
           <div className="flex items-center gap-3">
             <input type="file" accept=".csv" id={`f-${t.key}`} className="text-sm"/>
-            <Button data-testid={`ingest-upsert-${t.key}`} variant="outline" title="Uses 1 credit" onClick={() => upload(t.key, document.getElementById(`f-${t.key}`).files?.[0], "upsert")}>Upsert</Button>
-            <Button data-testid={`ingest-replace-${t.key}`} variant="ghost" title="Uses 1 credit" onClick={() => upload(t.key, document.getElementById(`f-${t.key}`).files?.[0], "replace")}>Replace all</Button>
+            <Button data-testid={`ingest-upsert-${t.key}`} variant="outline" disabled={ws === "demo"} title="Uses 1 credit" onClick={() => upload(t.key, document.getElementById(`f-${t.key}`).files?.[0], "upsert")}>Upsert</Button>
+            <Button data-testid={`ingest-replace-${t.key}`} variant="ghost" disabled={ws === "demo"} title="Uses 1 credit" onClick={() => upload(t.key, document.getElementById(`f-${t.key}`).files?.[0], "replace")}>Replace all</Button>
           </div>
           {result[t.key] && <p className="text-xs">{result[t.key]}</p>}
         </Card>))}

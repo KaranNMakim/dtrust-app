@@ -3,7 +3,21 @@ import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { useApi } from "@/lib/api";
 import { zoneColor, zoneLabel } from "@/lib/utils";
+import { CostTag, useWorkspace } from "@/lib/workspace";
 import { Button, Card, CardTitle, ErrorNote, Input, ScoreRing, SeverityBadge } from "@/components/dt-ui";
+function EmptyWorkspace({ data }) {
+    const { ws } = useWorkspace();
+    if (ws !== "mine" || !data || data.metrics > 0)
+        return null;
+    return (<Card data-testid="empty-workspace" className="border-primary/30 bg-primary/5">
+      <p className="font-semibold">Your workspace is empty</p>
+      <p className="mt-1 text-sm text-muted-foreground">
+        Add metric definitions from a Power BI or Tableau file, or upload glossary, metric, dashboard and lineage CSVs. Each upload uses 1 credit, and everything you add is saved.
+      </p>
+      <Link to="/ingest" data-testid="empty-workspace-ingest"><Button className="mt-4">Add your data</Button></Link>
+    </Card>);
+}
+
 export default function Home() {
     const { data, error } = useApi("/index");
     const [q, setQ] = useState("Which revenue metric should I trust?");
@@ -14,13 +28,14 @@ export default function Home() {
         <p className="text-sm text-muted-foreground">How far can leaders trust the numbers and recommendations they act on?</p>
       </header>
       <ErrorNote error={error}/>
+      <EmptyWorkspace data={data}/>
 
       <form className="flex gap-3" onSubmit={(e) => {
             e.preventDefault();
             navigate(`/ask?q=${encodeURIComponent(q)}`);
         }}>
         <Input data-testid="home-ask-input" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Ask a trust question…"/>
-        <Button data-testid="home-ask-submit" type="submit" className="h-11 whitespace-nowrap">Ask <span className="text-xs opacity-80">· 1 credit</span></Button>
+        <Button data-testid="home-ask-submit" type="submit" className="h-11 whitespace-nowrap">Ask <CostTag/></Button>
       </form>
 
       <Card className="flex items-center justify-between border-primary/30 bg-primary/5">

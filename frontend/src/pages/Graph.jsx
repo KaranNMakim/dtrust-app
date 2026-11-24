@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { Suspense, useCallback, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useApi } from "@/lib/api";
+import { useWorkspace } from "@/lib/workspace";
 import { zoneColor, zoneLabel } from "@/lib/utils";
 import { Card, CardTitle, ErrorNote } from "@/components/dt-ui";
 import { TrustGraph } from "@/components/trust-graph";
@@ -15,7 +16,8 @@ const CENTERS = [
 ];
 function GraphInner() {
     const [params] = useSearchParams();
-    const [center, setCenter] = useState(params.get("center") ?? "g_revenue");
+    const { ws } = useWorkspace();
+    const [center, setCenter] = useState(params.get("center") ?? (ws === "demo" ? "g_revenue" : ""));
     const [depth, setDepth] = useState(2);
     const path = center ? `/graph/neighbourhood/${center}?depth=${depth}` : "/graph";
     const { data, error } = useApi(path);
@@ -24,7 +26,7 @@ function GraphInner() {
     return (<div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
         <h1 className="mr-4 text-2xl font-semibold">Trust Graph</h1>
-        {CENTERS.map((c) => (<button key={c.id || "all"} onClick={() => setCenter(c.id)} className={`rounded-full border px-3 py-1 text-xs ${center === c.id ? "border-primary bg-primary/10" : "border-border bg-white"}`}>
+        {CENTERS.filter((c) => ws === "demo" || !c.id).map((c) => (<button key={c.id || "all"} onClick={() => setCenter(c.id)} className={`rounded-full border px-3 py-1 text-xs ${center === c.id ? "border-primary bg-primary/10" : "border-border bg-white"}`}>
             {c.label}
           </button>))}
         {center && (<select value={depth} onChange={(e) => setDepth(Number(e.target.value))} className="ml-2 rounded border border-border px-2 py-1 text-xs">

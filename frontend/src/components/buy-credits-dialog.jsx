@@ -88,7 +88,7 @@ export function BuyCreditsDialog({ open, reason, me, onClose, onPaid, onPremium 
         <div className="flex items-start justify-between">
           <div>
             <h2 className="text-lg font-semibold">Buy credits</h2>
-            <p className="text-sm text-muted-foreground">{reason ?? "1 credit = 1 paid action. Browsing stays free on the Basic plan."}</p>
+            <p className="text-sm text-muted-foreground">{reason ?? "1 credit = 1 action in your own workspace. The Acme demo stays free."}</p>
           </div>
           <button data-testid="buy-credits-close" onClick={onClose} className="rounded-md p-1 hover:bg-muted"><X className="h-4 w-4"/></button>
         </div>

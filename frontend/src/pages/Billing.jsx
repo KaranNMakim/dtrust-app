@@ -6,13 +6,11 @@ import { useWaitlist } from "@/components/waitlist-dialog";
 import { inr, PackCard, useCheckout } from "@/components/buy-credits-dialog";
 
 const FREE_FEATURES = [
-    "Enterprise Trust Index and zone breakdown",
-    "Every metric's trust score with evidence and fixes",
-    "Conflict queue and migration plans",
-    "AI recommendation trust scores",
-    "Interactive Trust Graph",
-    "Calibration backtest and steward actions (certify, deprecate, assign owners)",
-    "Preview metrics read from Power BI and Tableau files",
+    "The full Acme demo company: every page and every action",
+    "Ask trust questions and reconcile dashboard numbers",
+    "Trust scores with evidence, conflicts and migration plans",
+    "Trust Graph, calibration and dbt / Databricks export",
+    "Preview what we read from your Power BI or Tableau files",
 ];
 
 const when = (iso) => new Date(iso).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" });
@@ -25,14 +23,14 @@ function Plans({ me, onPremium }) {
           <p className="text-lg font-semibold">Basic</p>
           <span className="rounded-full bg-primary px-2 py-0.5 text-[10px] font-semibold text-primary-foreground">YOUR PLAN</span>
         </div>
-        <p className="text-sm text-muted-foreground">Free forever. Explore the demo workspace end to end.</p>
+        <p className="text-sm text-muted-foreground">Free forever. Test-drive everything on the Acme demo company.</p>
         <ul className="mt-4 space-y-1.5 text-sm">
           {FREE_FEATURES.map((f) => <li key={f} className="flex gap-2"><Check className="mt-0.5 h-4 w-4 shrink-0 text-green-700"/>{f}</li>)}
         </ul>
       </Card>
       <Card data-testid="plan-credits">
-        <p className="text-lg font-semibold">Pay per use</p>
-        <p className="text-sm text-muted-foreground">Prepaid credits, no subscription. 1 credit per action. New accounts get {me?.free_credits ?? 3} free.</p>
+        <p className="text-lg font-semibold">My workspace</p>
+        <p className="text-sm text-muted-foreground">Your own metrics, saved permanently. Prepaid credits, no subscription: 1 credit per action. New accounts get {me?.free_credits ?? 3} free. Browsing and steward actions stay free.</p>
         <ul className="mt-4 space-y-1.5 text-sm">
           {Object.values(me?.paid_actions ?? {}).map((a) => <li key={a} className="flex gap-2"><Lock className="mt-0.5 h-4 w-4 shrink-0 text-primary"/>{a}</li>)}
         </ul>
@@ -57,7 +55,7 @@ export default function BillingPage() {
     return (<div className="mx-auto max-w-5xl space-y-6">
       <header>
         <h1 className="text-2xl font-semibold">Plan & billing</h1>
-        <p className="text-sm text-muted-foreground">Browse for free on the Basic plan. Buy credits only for the actions you run.</p>
+        <p className="text-sm text-muted-foreground">The Acme demo is free. Credits are only used when you work on your own data.</p>
       </header>
       <Card className="flex items-center gap-4">
         <Coins className="h-8 w-8 text-primary"/>

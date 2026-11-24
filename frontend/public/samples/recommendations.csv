@@ -1,0 +1,7 @@
+rec_id,model,version,title,raw_confidence,input_features,evidence,rationale,accepted_90d,success_90d,rule_violations
+r1,Promo Optimizer,v2.3,Run 15% off on Brand X 500ml in South zone in Week 2,0.86,m_promo_roi:0.41|m_fcst_acc:0.33|m_trade_spend:0.26,m_promo_roi|dp_rgm,Lift model predicts 18% volume gain,42,31,
+r2,Promo Optimizer,v2.3,Deep 30% discount on Brand Y family pack,0.91,m_promo_roi:0.52|m_gross_rev_mkt:0.48,m_gross_rev_mkt,,42,31,discount_over_20pct_without_approval
+r3,Churn Predictor,v1.1,Call 120 at-risk distributors in East zone,0.78,m_churn_mkt:0.6|m_rev_sales:0.4,m_churn_mkt,Accounts with 60-day order gap,18,9,
+r4,Churn Predictor,v1.1,Offer credit extension to Distributor D-2231,0.64,m_churn_sales:0.7|m_net_rev_fin:0.3,m_churn_sales|m_net_rev_fin,Order frequency dropped 40%,18,9,
+r5,Replenishment GPT,v0.9,Raise safety stock on SKU 8812 by 20%,0.72,m_fcst_acc:0.55|m_otif_sc:0.45,m_otif_sc|dp_demand,OTIF dipped to 87% for 3 weeks,0,0,
+r6,Replenishment GPT,v0.9,Shift 2 trucks/day from DC North to DC West,0.69,m_otif_cs:1.0,,,0,0,
