@@ -1,9 +1,10 @@
 import { Link, NavLink, Outlet } from "react-router-dom";
 import { useEffect } from "react";
 import { UserButton, useAuth } from "@clerk/react";
-import { Coins, Lock } from "lucide-react";
+import { Coins, Lock, Sparkles } from "lucide-react";
 import { setTokenGetter } from "@/lib/api";
 import { CreditsProvider, useCredits } from "@/components/credits";
+import { useWaitlist } from "@/components/waitlist-dialog";
 
 const nav = [
     { href: "/", label: "Home" },
@@ -19,9 +20,13 @@ const nav = [
 ];
 
 function TopBar() {
-    const { credits, openBuy } = useCredits();
+    const { credits, openBuy, openPremium } = useCredits();
     const low = credits != null && credits <= 1;
+    const joined = useWaitlist();
     return (<div className="mb-6 flex items-center justify-end gap-3" data-testid="top-bar">
+      <button data-testid="join-waitlist-btn" onClick={openPremium} className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium text-primary transition-colors hover:bg-primary/5">
+        <Sparkles className="h-3.5 w-3.5"/>{joined ? "On premium waitlist" : "Join premium waitlist"}
+      </button>
       <Link to="/billing" data-testid="plan-badge" className="rounded-full border border-border bg-white px-3 py-1 text-xs text-muted-foreground hover:bg-muted">
         Basic plan · free
       </Link>

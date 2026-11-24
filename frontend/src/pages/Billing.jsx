@@ -1,7 +1,8 @@
-import { Check, Coins, Lock } from "lucide-react";
+import { Check, Coins, Lock, Sparkles } from "lucide-react";
 import { BILLING, useApi } from "@/lib/api";
-import { Card, CardTitle, ErrorNote } from "@/components/dt-ui";
+import { Button, Card, CardTitle, ErrorNote } from "@/components/dt-ui";
 import { useCredits } from "@/components/credits";
+import { useWaitlist } from "@/components/waitlist-dialog";
 import { inr, PackCard, useCheckout } from "@/components/buy-credits-dialog";
 
 const FREE_FEATURES = [
@@ -16,8 +17,9 @@ const FREE_FEATURES = [
 
 const when = (iso) => new Date(iso).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" });
 
-function Plans({ me }) {
-    return (<div className="grid gap-5 md:grid-cols-2">
+function Plans({ me, onPremium }) {
+    const joined = useWaitlist();
+    return (<div className="grid gap-5 md:grid-cols-3">
       <Card data-testid="plan-basic" className="border-primary/40">
         <div className="flex items-center justify-between">
           <p className="text-lg font-semibold">Basic</p>
@@ -35,11 +37,20 @@ function Plans({ me }) {
           {Object.values(me?.paid_actions ?? {}).map((a) => <li key={a} className="flex gap-2"><Lock className="mt-0.5 h-4 w-4 shrink-0 text-primary"/>{a}</li>)}
         </ul>
       </Card>
+      <Card data-testid="plan-premium" className="flex flex-col">
+        <div className="flex items-center justify-between">
+          <p className="flex items-center gap-2 text-lg font-semibold"><Sparkles className="h-4 w-4 text-primary"/>Premium</p>
+          <span className="rounded-full border border-border px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">COMING SOON</span>
+        </div>
+        <p className="text-sm text-muted-foreground">For teams that need more: volume credits, shared workspaces, live BI connectors and onboarding help.</p>
+        <span className="flex-1"/>
+        <Button data-testid="billing-join-waitlist" className="mt-4" variant={joined ? "outline" : "default"} onClick={onPremium}>{joined ? "You're on the waitlist" : "Join waitlist"}</Button>
+      </Card>
     </div>);
 }
 
 export default function BillingPage() {
-    const { me, refresh } = useCredits();
+    const { me, refresh, openPremium } = useCredits();
     const hist = useApi("/history", BILLING);
     const { buy, busy, msg } = useCheckout(() => { refresh(); hist.reload(); });
     const packs = me?.packs ?? [];
@@ -55,7 +66,7 @@ export default function BillingPage() {
           <p className="text-xs text-muted-foreground">credits available</p>
         </div>
       </Card>
-      <Plans me={me}/>
+      <Plans me={me} onPremium={openPremium}/>
       <div>
         <CardTitle className="mb-3">Credit packs</CardTitle>
         {me && !me.payments_enabled && (<p className="mb-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">Payments aren't switched on yet. Credit packs can be bought once the owner adds the payment keys.</p>)}

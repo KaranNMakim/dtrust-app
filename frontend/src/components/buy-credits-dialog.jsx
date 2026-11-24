@@ -78,7 +78,7 @@ export function useCheckout(onPaid) {
     return { buy, busy, msg };
 }
 
-export function BuyCreditsDialog({ open, reason, me, onClose, onPaid }) {
+export function BuyCreditsDialog({ open, reason, me, onClose, onPaid, onPremium }) {
     const { buy, busy, msg } = useCheckout(onPaid);
     if (!open)
         return null;
@@ -100,7 +100,10 @@ export function BuyCreditsDialog({ open, reason, me, onClose, onPaid }) {
         {msg && (<p data-testid="buy-credits-message" className={`mt-4 flex items-center gap-2 text-sm ${msg.ok ? "text-green-700" : "text-red-700"}`}>
             {msg.ok && <Check className="h-4 w-4"/>}{msg.text}
           </p>)}
-        <p className="mt-4 text-xs text-muted-foreground">Secure checkout by Razorpay: cards, UPI and netbanking. Prices in Indian rupees.</p>
+        <div className="mt-4 flex items-center justify-between gap-3">
+          <p className="text-xs text-muted-foreground">Secure checkout by Razorpay: cards, UPI and netbanking. Prices in Indian rupees.</p>
+          <button data-testid="dialog-join-waitlist" onClick={onPremium} className="shrink-0 text-xs font-medium text-primary hover:underline">Need more? Join the premium waitlist →</button>
+        </div>
       </div>
     </div>);
 }

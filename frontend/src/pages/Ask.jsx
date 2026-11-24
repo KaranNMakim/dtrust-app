@@ -13,7 +13,7 @@ const SUGGESTIONS = [
     "Show me conflicts on churn",
 ];
 function AskInner() {
-    const [params] = useSearchParams();
+    const [params, setParams] = useSearchParams();
     const [q, setQ] = useState(params.get("q") ?? SUGGESTIONS[0]);
     const [res, setRes] = useState(null);
     const [err, setErr] = useState(null);
@@ -36,8 +36,10 @@ function AskInner() {
         if (started.current)
             return;
         started.current = true;
-        if (params.get("q"))
+        if (params.get("q")) {
             run(params.get("q"));
+            setParams({}, { replace: true });
+        }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
     return (<div className="mx-auto max-w-4xl space-y-5">

@@ -14,6 +14,8 @@ try:  # launched as `backend.server` (the default)
 except ModuleNotFoundError:  # launched from inside backend/ as `server`
     from clerk_auth import clerk_router
 from billing import billing_router  # noqa: E402
+from premium import premium_router  # noqa: E402
+from premium import premium_router  # noqa: E402
 from app import __version__  # noqa: E402
 from app.main import router as trust_router  # noqa: E402
 
@@ -35,6 +37,8 @@ def health():
 
 app.include_router(clerk_router)
 app.include_router(billing_router)
+app.include_router(premium_router)
+app.include_router(premium_router)
 app.include_router(trust_router)
 
 app.add_middleware(

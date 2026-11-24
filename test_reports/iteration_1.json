@@ -1,0 +1,39 @@
+{
+  "summary": "Iteration 1: Full backend + frontend test of Decision Trust SaaS layer (Clerk auth, per-user workspaces, credits ledger, paid vs free actions, billing UI, Razorpay disabled). 17/17 pytest pass; race checks pass; all UI flows verified via Clerk ticket sign-in. No functional bugs found; only minor UX/code-quality notes.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/v1/ingest/{type}", "issue": "Workspace store is mutated (and mode=replace clears data) BEFORE spend_credit; if spend fails under a concurrent race (credit already consumed), the ingest is applied but 402 returned without charge. Low impact; spend first (or reserve) then apply."},
+      {"endpoint": "app/tenancy.py _engines", "issue": "Per-user in-memory engines dict grows unbounded (one full TrustEngine per user ever seen) and resets on restart; no eviction (LRU/TTL). Memory risk as users grow."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {"flow": "Ask deep-link", "issue": "Reloading /ask?q=... (or browser back/forward to it) re-runs Ask on mount and spends another credit. Consider clearing q from the URL after the run (setSearchParams/replace) so refresh doesn't charge.", "affected_selectors": ["[data-testid='ask-submit']"]},
+      {"flow": "Migration plan 'Reconcile' links / MetricDetail", "issue": "Migration plan variant 'Reconcile' link goes to /reconcile?a=..&b=.. which auto-runs and charges 1 credit without any '1 credit' label/tooltip on the link (Reconcile buttons elsewhere are labelled).", "affected_selectors": ["components/migration-plan.jsx Link to /reconcile"]}
+    ],
+    "design_issues": [
+      {"screen": "Various", "issues": ["Sidebar nav links and conflict-row buttons (Migration plan/Resolve/Dismiss) lack data-testid attributes", "Disabled Buy buttons are light-blue on white - acceptable but low contrast text"]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests_saas/test_saas_billing_tenancy.py", "/app/backend/tests_saas/race_check.py", "/app/backend/tests_saas/cleanup_users.py", "/app/test_reports/pytest/pytest_results.xml"],
+  "action_items": [
+    "(Minor) Clear ?q from /ask URL after the auto-run to avoid re-charging on refresh",
+    "(Minor) Label migration-plan 'Reconcile' links as using 1 credit",
+    "(Minor) In ingest, spend credit before mutating the store",
+    "(Optional) Add LRU eviction for per-user engines"
+  ],
+  "critical_code_review_comments": [
+    "ensure_member: grant-ledger insert uses find_one-then-insert (non-atomic); concurrent first requests tested with 8 parallel calls -> only 1 grant row, OK in practice but a unique index on (user_id,type=grant) would make it robust",
+    "spend_credit is atomic ($gte:1 conditional $inc) - verified: 6 concurrent asks at 1 credit -> 1x200, 5x402, credits 0",
+    "billing.py uses sync pymongo inside sync routes (threadpool) - acceptable",
+    "extract(): stray docstring after the commit check is dead code; harmless"
+  ],
+  "updated_files": ["/app/backend/tests_saas/test_saas_billing_tenancy.py", "/app/backend/tests_saas/race_check.py", "/app/backend/tests_saas/cleanup_users.py"],
+  "success_rate": {"backend": "100% (17/17)", "frontend": "100%"},
+  "seed_data_creation": "Created Clerk+Mongo test users qa_a_t1, qa_b_t1, qa_c_t1, qa_race_t1, qa_ui_t1 (+clerk_test@example.com); all deleted afterwards by user_id (Mongo users/credit_ledger + Clerk user). Existing tester/tester2 accounts untouched.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Run: for u in qa_a qa_b qa_c; do /root/.venv/bin/python /app/scripts/clerk_token.py ${u}_t1+clerk_test@example.com > /tmp/$u.json; done; then cd /app/backend && pytest tests_saas -n 0 (tests read tokens from /tmp/qa_*.json and need FRESH users for the 3-credit assertion). Cleanup: python tests_saas/cleanup_users.py /tmp/qa_*.json. UI: one-time ticket per browser session via /sign-in?__clerk_ticket=. Verified: signed-out redirect to /sign-in with branded panel; top bar 'Basic plan · free', credits, Buy credits; index 56; free pages don't spend; /ask and /reconcile without params don't auto-run; Home Ask -> exactly 1 credit (StrictMode guard works); reconcile preset -> 1 credit; at 0 credits Buy dialog opens with error note, Buy buttons disabled + amber notice; billing ledger shows +3 grant and -1 rows; orders 503; per-user isolation of deprecate/audit/ledger."
+}

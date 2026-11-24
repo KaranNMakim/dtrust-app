@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { api, useApi } from "@/lib/api";
 import { Button, Card, ErrorNote } from "@/components/dt-ui";
@@ -44,8 +44,7 @@ function ReconcileInner() {
             setErr(e.message);
         }
     }
-    const started = useRef(false);
-    useEffect(() => { if (started.current) return; started.current = true; if (params.get("a") && params.get("b")) run(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
+    
     return (<div className="mx-auto max-w-5xl space-y-5">
       <header>
         <h1 className="text-2xl font-semibold">Why don&apos;t these two numbers agree?</h1>

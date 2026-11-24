@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { api, BILLING } from "@/lib/api";
 import { BuyCreditsDialog } from "@/components/buy-credits-dialog";
+import { WaitlistDialog } from "@/components/waitlist-dialog";
 
 const CreditsContext = createContext(null);
 
@@ -12,6 +13,8 @@ export function CreditsProvider({ children }) {
     const [me, setMe] = useState(null);
     const [open, setOpen] = useState(false);
     const [reason, setReason] = useState(null);
+    const [premiumOpen, setPremiumOpen] = useState(false);
+    const openPremium = useCallback(() => { setOpen(false); setPremiumOpen(true); }, []);
 
     const refresh = useCallback(async () => {
         try {
@@ -37,8 +40,9 @@ export function CreditsProvider({ children }) {
         };
     }, [refresh, openBuy]);
 
-    return (<CreditsContext.Provider value={{ me, credits: me?.credits ?? null, refresh, openBuy }}>
+    return (<CreditsContext.Provider value={{ me, credits: me?.credits ?? null, refresh, openBuy, openPremium }}>
       {children}
-      <BuyCreditsDialog open={open} reason={reason} me={me} onClose={() => setOpen(false)} onPaid={refresh}/>
+      <BuyCreditsDialog open={open} reason={reason} me={me} onClose={() => setOpen(false)} onPaid={refresh} onPremium={openPremium}/>
+      <WaitlistDialog open={premiumOpen} onClose={() => setPremiumOpen(false)}/>
     </CreditsContext.Provider>);
 }

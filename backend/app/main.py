@@ -366,6 +366,7 @@ async def ingest(source_type: Literal["glossary", "metric", "dashboard", "lineag
         raise problem(422, "Missing columns", ", ".join(sorted(missing)))
     attr, loader = INGEST_LOADERS[source_type]
     store = engine.store
+    spend_credit(uid, "ingest", f"{source_type}: {file.filename}")
     if mode == "replace":
         current = getattr(store, attr)
         current.clear()
@@ -378,7 +379,6 @@ async def ingest(source_type: Literal["glossary", "metric", "dashboard", "lineag
             errors.append({"row": i, "error": str(exc)})
     summary = engine.recompute()
     _sync_graph()
-    spend_credit(uid, "ingest", f"{source_type}: {file.filename}")
     store.audit.append({"actor": who, "action": f"ingest_{source_type}", "entity_id": file.filename,
                         "reason": None, "payload": {"rows": ok, "errors": len(errors)}})
     return {"source_type": source_type, "rows_ingested": ok, "errors": errors, **summary}
