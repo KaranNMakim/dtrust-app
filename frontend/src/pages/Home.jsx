@@ -20,7 +20,8 @@ function EmptyWorkspace({ data }) {
 
 export default function Home() {
     const { data, error } = useApi("/index");
-    const [q, setQ] = useState("Which revenue metric should I trust?");
+    const { ws } = useWorkspace();
+    const [q, setQ] = useState(ws === "demo" ? "Which revenue metric should I trust?" : "");
     const navigate = useNavigate();
     return (<div className="mx-auto max-w-6xl space-y-6">
       <header>
@@ -46,7 +47,7 @@ export default function Home() {
         <Link to="/reconcile" data-testid="home-reconcile-link"><Button variant="outline">Reconcile</Button></Link>
       </Card>
 
-      {data && (<>
+      {data && !(ws === "mine" && data.metrics === 0) && (<>
           <div className="grid gap-6 md:grid-cols-3">
             <Card className="flex items-center gap-6">
               <ScoreRing score={data.index} zone={data.zone} size={128}/>

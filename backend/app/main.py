@@ -199,7 +199,7 @@ def reconcile(a: str, b: str, dashboard_a: str | None = None, dashboard_b: str |
         charge(uid, "reconcile", f"{engine.store.name_of(a)} vs {engine.store.name_of(b)}")
         return out
     except KeyError as exc:
-        raise problem(404, "Not found", str(exc)) from exc
+        raise problem(404, "Not found", f"{exc.args[0]} isn't in this workspace") from exc
     except ValueError as exc:
         raise problem(422, "Cannot reconcile", str(exc)) from exc
 
@@ -361,10 +361,10 @@ async def ingest(source_type: Literal["glossary", "metric", "dashboard", "lineag
     if missing:
         raise problem(422, "Missing columns", ", ".join(sorted(missing)))
     store = engine.store
-    charge(uid, "ingest", f"{source_type}: {file.filename}")
     ok, errors = apply_ingest(engine, source_type, rows, mode)
-    record("ingest", {"source_type": source_type, "rows": rows, "mode": mode})
     summary = engine.recompute()
+    charge(uid, "ingest", f"{source_type}: {file.filename}")
+    record("ingest", {"source_type": source_type, "rows": rows, "mode": mode})
     _sync_graph()
     store.audit.append({"actor": who, "action": f"ingest_{source_type}", "entity_id": file.filename,
                         "reason": None, "payload": {"rows": ok, "errors": len(errors)}})
@@ -392,10 +392,10 @@ async def extract(tool: Literal["powerbi", "tableau"], file: UploadFile = File(.
         raise problem(422, "Could not read file", str(exc)) from exc
     out = res.to_dict()
     if commit:
-        charge(uid, "extract", name)
         apply_extract(engine, res.metrics, res.dashboards)
-        record("extract", {"metrics": res.metrics, "dashboards": res.dashboards})
         out["summary"] = engine.recompute()
+        charge(uid, "extract", name)
+        record("extract", {"metrics": res.metrics, "dashboards": res.dashboards})
         _sync_graph()
         engine.store.audit.append({"actor": who, "action": f"extract_{tool}", "entity_id": name, "reason": None,
                                    "payload": {"metrics": len(res.metrics), "dashboards": len(res.dashboards)}})

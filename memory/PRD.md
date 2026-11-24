@@ -22,13 +22,20 @@ Later requests: a free Basic plan with basic features outside the paywall; a pre
 - Premium waitlist dialog with subject and reason. Each signup is saved and emailed to the owner (limit 3 per day per user).
 - Tests: iteration_1 100%, iteration_2 passed; its reconcile prefill bug and waitlist duplicate issues are fixed.
 
+## Paywall model (Option 1, 2026-11-24)
+- Two workspaces per user, switched from the sidebar (X-Workspace header).
+- **Acme demo**: sample company, everything free (Ask, Reconcile, Export too). It's read-only for new data (ingest and extract commit return 403) and resets on restart.
+- **My workspace**: starts empty. Changes are saved as an event log (Mongo workspace_events) and replayed on load, so they survive restarts. Ask, Reconcile, Export, CSV ingest and extract commit cost 1 credit each. Browsing and steward actions are free.
+- Sample files can be downloaded from /samples/* on the Ingest page.
+- Tests: iteration_3 backend 28/28. Its Reconcile stale-dashboard bug and the robustness notes are fixed.
+
 ## Known limits
 - Razorpay keys missing, so Buy is disabled. Owner was asked about UPI options (Razorpay supports UPI) and hasn't answered yet.
-- Workspaces live in memory and reset on backend restart (original repo design). No eviction.
+- Demo workspaces live in memory and reset on restart (fine). My workspace is replayed from its event log the first time it's opened after a restart. Engines are held in memory with no eviction.
 - Claude explanations are off (no ANTHROPIC_API_KEY), so template answers are used.
 - The original repo tests in backend/tests target the old single-tenant app; the new tests are in backend/tests_saas.
 
 ## Backlog
 - P0: Add Razorpay keys to turn on payments (UPI, cards, netbanking).
-- P1: Save workspaces in the database; owner admin view (waitlist, customers, revenue); low-balance emails and receipts.
+- P1: Owner admin view (waitlist, customers, revenue); low-balance emails and receipts.
 - P2: Team accounts with shared credits; monthly plans; per-action credit pricing; turn on Claude explanations.

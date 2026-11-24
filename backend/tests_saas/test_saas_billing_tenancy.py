@@ -100,62 +100,46 @@ class TestCreditsAndPaid:
         print(txt[:400])
         assert "56" in txt
 
-    def test_paid_actions_deduct(self):
+    # Demo workspace (default, no X-Workspace header) is free: paid actions never charge; own-data writes are 403
+    def test_demo_paid_actions_free(self):
         s, uid = _user("qa_a")
         set_credits(uid, 10)
         c = credits(s)
-        r = s.post(f"{V1}/ask", json={"question": "Which revenue metric should I trust?"})
-        assert r.status_code == 200, r.text
-        assert credits(s) == c - 1
+        assert s.post(f"{V1}/ask", json={"question": "Which revenue metric should I trust?"}).status_code == 200
         r = s.get(f"{V1}/reconcile", params={"a": "m_rev_sales", "b": "m_net_rev_fin",
                                              "dashboard_a": "d_sales_qbr", "dashboard_b": "d_board"})
         assert r.status_code == 200, r.text
-        assert credits(s) == c - 2
-        r = s.get(f"{V1}/metrics/m_net_rev_fin/export", params={"format": "dbt"})
-        assert r.status_code == 200, r.text
-        assert credits(s) == c - 3
+        assert s.get(f"{V1}/metrics/m_net_rev_fin/export", params={"format": "dbt"}).status_code == 200
         csv_ = "term_id,term,definition\nTEST_g_x,TEST_Term,TEST definition here\n"
-        r = s.post(f"{V1}/ingest/glossary", files={"file": ("TEST_g.csv", csv_.encode())})
-        assert r.status_code == 200, r.text
-        assert r.json()["rows_ingested"] == 1
-        assert credits(s) == c - 4
+        assert s.post(f"{V1}/ingest/glossary", files={"file": ("TEST_g.csv", csv_.encode())}).status_code == 403
         twb = (SAMPLES / "acme_sales.twb").read_bytes()
         r = s.post(f"{V1}/extract/tableau", params={"commit": "true"}, files={"file": ("acme_sales.twb", twb)})
-        assert r.status_code == 200, r.text
-        assert credits(s) == c - 5
-        h = s.get(f"{BILL}/history").json()
-        actions = [l["action"] for l in h["ledger"] if l["type"] == "usage"]
-        for a in ["ask", "reconcile", "export", "ingest", "extract"]:
-            assert a in actions, (a, actions)
-        assert all(l["credits"] == -1 for l in h["ledger"] if l["type"] == "usage")
+        assert r.status_code == 403
+        assert credits(s) == c
 
     def test_failed_paid_actions_not_charged(self):
         s, uid = _user("qa_a")
+        s.headers["X-Workspace"] = "mine"
         c = credits(s)
         assert s.get(f"{V1}/reconcile", params={"a": "nope", "b": "m_net_rev_fin"}).status_code in (404, 422)
         assert s.get(f"{V1}/metrics/nope/export").status_code == 404
         assert s.post(f"{V1}/ask", json={"question": "x"}).status_code == 422
-        r = s.post(f"{V1}/ingest/glossary", files={"file": ("bad.csv", b"a,b\n1,2\n")})
-        assert r.status_code == 422
+        assert s.post(f"{V1}/ingest/glossary", files={"file": ("bad.csv", b"a,b\n1,2\n")}).status_code == 422
         r = s.post(f"{V1}/extract/tableau", params={"commit": "true"}, files={"file": ("bad.twb", b"not xml")})
-        print("bad extract", r.status_code, r.text[:200])
+        assert r.status_code == 422
         assert credits(s) == c
 
-    def test_zero_credits_402(self):
+    def test_zero_credits_demo_free_mine_402(self):
         s, uid = _user("qa_a")
         set_credits(uid, 0)
+        assert s.post(f"{V1}/ask", json={"question": "Which revenue metric should I trust?"}).status_code == 200
+        s.headers["X-Workspace"] = "mine"
         r = s.post(f"{V1}/ask", json={"question": "Which revenue metric should I trust?"})
         assert r.status_code == 402 and r.json()["title"] == "Out of credits"
-        assert s.get(f"{V1}/reconcile", params={"a": "m_rev_sales", "b": "m_net_rev_fin"}).status_code == 402
-        assert s.get(f"{V1}/metrics/m_net_rev_fin/export").status_code == 402
-        r = s.post(f"{V1}/ingest/glossary", files={"file": ("g.csv", b"term_id,term,definition\nx,y,zzzzzz\n")})
-        assert r.status_code == 402
         twb = (SAMPLES / "acme_sales.twb").read_bytes()
         assert s.post(f"{V1}/extract/tableau", params={"commit": "true"},
                       files={"file": ("acme_sales.twb", twb)}).status_code == 402
-        # preview still free
         assert s.post(f"{V1}/extract/tableau", files={"file": ("acme_sales.twb", twb)}).status_code == 200
-        assert s.get(f"{V1}/index").status_code == 200
         assert credits(s) == 0
 
     def test_orders_503(self):

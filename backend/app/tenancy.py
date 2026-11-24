@@ -9,19 +9,21 @@ from contextvars import ContextVar
 from datetime import datetime, timezone
 
 from fastapi import HTTPException, Request
+from pymongo import ReturnDocument
 from starlette.concurrency import run_in_threadpool
 
 from clerk_auth import require_user
 from billing import db, ensure_member, spend_credit
 
 from .config import settings
-from .engine import ActionError, TrustEngine
+from .engine import TrustEngine
 from .llm import ClaudeGateway
 from .store import Store
 
 log = logging.getLogger("decision_trust")
 llm = ClaudeGateway(settings)
 events = db["workspace_events"]
+events.create_index([("user_id", 1), ("seq", 1)])
 
 WORKSPACES = ("demo", "mine")
 _engines: dict[tuple[str, str], TrustEngine] = {}
@@ -62,7 +64,7 @@ def apply_extract(eng: TrustEngine, metrics: list[dict], dashboards: list[dict])
 
 
 def _replay(eng: TrustEngine, user_id: str) -> None:
-    for ev in events.find({"user_id": user_id}, {"_id": 0}).sort("seq", 1):
+    for ev in events.find({"user_id": user_id}, {"_id": 0}).sort([("seq", 1), ("created_at", 1)]):
         try:
             p = ev["payload"]
             if ev["op"] == "ingest":
@@ -73,8 +75,9 @@ def _replay(eng: TrustEngine, user_id: str) -> None:
                 eng.recompute()
             elif ev["op"] == "action":
                 getattr(eng, p["method"])(*p["args"], **p["kwargs"])
-        except (ActionError, KeyError, ValueError) as exc:
+        except Exception as exc:  # noqa: BLE001
             log.warning("Skipped workspace event %s for %s: %s", ev.get("seq"), user_id, exc)
+    eng.recompute()
 
 
 def engine_for(user_id: str, ws: str) -> TrustEngine:
@@ -153,6 +156,11 @@ def record(op: str, payload: dict) -> None:
     if _ws_var.get() != "mine":
         return
     uid = _member_var.get()["user_id"]
-    seq = events.count_documents({"user_id": uid})
+    key = f"ws_events:{uid}"
+    if not db["counters"].find_one({"_id": key}):
+        db["counters"].update_one({"_id": key}, {"$setOnInsert": {"n": events.count_documents({"user_id": uid}) - 1}},
+                                  upsert=True)
+    seq = db["counters"].find_one_and_update({"_id": key}, {"$inc": {"n": 1}}, upsert=True,
+                                             return_document=ReturnDocument.AFTER)["n"]
     events.insert_one({"user_id": uid, "seq": seq, "op": op, "payload": payload,
                        "created_at": datetime.now(timezone.utc).isoformat()})

@@ -1,0 +1,46 @@
+{
+  "summary": "Iteration 3: tested the Demo vs My workspace paywall (Option 1) end to end, backend and UI. Backend: 28/28 pytest pass, counting a live backend-restart persistence test. Demo is free: Ask, Reconcile and Export leave credits unchanged even at 0 credits. Demo returns 403 'Demo workspace' for ingest and for extract commit; extract preview still works. My workspace starts empty, and each Ask, Reconcile, Export, CSV ingest and extract commit costs 1 credit. At 0 credits these return 402. Steward actions are free, also at 0 credits. A metrics CSV uploaded before the glossary works (placeholder terms, no 500). Data plus assign-owner/deprecate/conflict-dismiss survived `supervisorctl restart backend`, identical index 51.7. Users are isolated. UI checks that passed: the switcher sets localStorage dt-workspace and goes to /. The X-Workspace header is sent. Demo shows '· free in demo' with no locks; mine shows '· 1 credit' with lock icons. Ingest demo notice, Switch button and disabled buttons work. Empty-workspace card works. In mine, Reconcile has no presets and Ask shows no suggestions; Graph defaults to 'Whole graph'. CSV and extract uploads take 1 credit each and preview is free. The Buy credits dialog opens at 0 credits for Export and Ask. Billing copy is correct and the sample downloads return 200. Found 1 functional bug: stale demo dashboard defaults on Reconcile in My workspace.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "/api/v1/reconcile", "issue": "An unknown dashboard id gives a 404 whose detail is the raw Python KeyError repr \"'d_sales_qbr'\". The UI shows this as-is. It should say something like 'Dashboard d_sales_qbr not found in this workspace'."},
+      {"endpoint": "tenancy._replay", "issue": "If an event raises partway through (inside apply_* or recompute), the store is left changed but scores are not recomputed. metric_scores then misses ids and /index returns 500 KeyError until the next restart. This happened in older logs for dev user ws1+clerk_test (event 1, KeyError 'g_revenue', before the placeholder fix); that user is fine now. Fix: call eng.recompute() once after the replay loop (or in a finally), and catch Exception per event."},
+      {"endpoint": "tenancy.record", "issue": "seq = count_documents() then insert is not atomic. Two concurrent writes by the same user can get the same seq, and replay order between them is then undefined. Use an atomic counter or sort by _id/created_at. Add a unique index on (user_id, seq)."},
+      {"endpoint": "/api/v1/ingest/*, /api/v1/extract?commit=true", "issue": "charge() runs before apply_*/recompute. If those raise an unexpected exception, the user loses a credit and gets a 500. Charge after a successful apply, or refund on failure."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "Reconcile.jsx (My workspace)", "issue": "The da/db state always starts from PRESETS[0] ('d_sales_qbr'/'d_board'), even in mine. The reset effect only runs when metric `a` is missing. When the user's own data has m_rev_sales and m_net_rev_fin (for example after uploading the sample metrics.csv) but not those dashboards, the dropdown shows 'Any dashboard (as defined)'. The request still sends dashboard_a=d_sales_qbr, which gives a 404 and the error box \"'d_sales_qbr'\". No credit is charged. Repro: in My workspace upload /samples/metrics.csv, open Reconcile, click Reconcile. Fix: when ws==='mine', start da/db as '' (and a/b from the user's metrics), or clear da/db when the value is not in dashes.data.", "selector": "[data-testid='reconcile-submit']", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Home (empty My workspace)", "issues": ["The index ring shows '0 · Untrusted' in red, and the Ask box is pre-filled with an Acme question ('Which revenue metric should I trust?'). Asking would spend a credit on an empty workspace. Hide or neutralise the index (show '—') and the Ask prefill until data exists."]},
+      {"screen": "Trust Graph (empty My workspace)", "issues": ["Blank canvas with no empty-state message or link to Ingest."]},
+      {"screen": "MetricDetail", "issues": ["One message slot is shared, so the 402 'You're out of credits' from Export shows under the Steward actions Assign field. That suggests steward actions cost credits, but they are free."]},
+      {"screen": "Conflicts / Home (placeholder glossary)", "issues": ["Placeholder term labels come from the id, e.g. g_otif becomes 'Otif' ('3 definitions of Otif'). Acceptable, but 'OTIF' would look better (keep the original case or upper-case short ids)."]},
+      {"screen": "Ingest", "issues": ["Uses the browser's native <select> and <input type=file> controls, which don't match the shadcn styling elsewhere."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests_saas/test_workspaces.py", "/app/backend/tests_saas/test_saas_billing_tenancy.py", "/app/test_reports/pytest/pytest_results_iter3.xml"],
+  "action_items": [
+    "Reconcile.jsx: in My workspace don't default dashboard_a/b to the Acme presets (d_sales_qbr/d_board); start them as '' or check them against the user's dashboards",
+    "Backend reconcile: return a readable 404 detail for an unknown dashboard or metric instead of the KeyError repr",
+    "tenancy._replay: always recompute after replay and catch any exception per event, so a bad event can't leave the engine half-applied (/index 500)",
+    "tenancy.record: make seq atomic (counter or unique index)",
+    "Optional UX: empty-workspace index and Ask prefill, Graph empty state, MetricDetail separate error slot for export vs steward actions"
+  ],
+  "critical_code_review_comments": [
+    "paid_action() checks a member snapshot taken in bind_user, but spend_credit is atomic ($gte:1), so double-spend is prevented. The race only gives a 402 after the work is done. Acceptable.",
+    "The ingest charge happens before apply. Rows with errors are still charged (1 credit per file). This is consistent but should be documented.",
+    "Demo engines are per user and in memory, so _engines grows without bound (one demo plus one mine engine per user ever seen). Consider LRU eviction; mine reloads from events anyway."
+  ],
+  "updated_files": ["/app/backend/tests_saas/test_workspaces.py (new)", "/app/backend/tests_saas/test_saas_billing_tenancy.py (paid tests updated: demo free/403, mine paid/402)"],
+  "success_rate": {"backend": "100% (28/28; test_new_user_me needs a fresh qa_a user, see context)", "frontend": "~93% (1 functional bug in Reconcile in My workspace)"},
+  "seed_data_creation": "Created Clerk test users ws_a/b/c_i3, ws_ui_i3, qa_a/b/c_i3 and the random-suffix ws_* users from pytest. All were deleted afterwards from Mongo (users, credit_ledger, workspace_events) and from Clerk by user_id. No waitlist email was sent.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Run with `cd /app/backend && /root/.venv/bin/python -m pytest tests_saas/test_workspaces.py tests_saas/test_saas_billing_tenancy.py -n 0`. test_workspaces.py creates fresh Clerk users per run and restarts the backend itself in TestPersistAfterRestart. test_saas_billing_tenancy.py reads /tmp/qa_a|qa_b|qa_c.json; regenerate them with clerk_token.py using NEW emails, otherwise test_new_user_me (expects 3 credits) fails. Sign-in tickets are single-use and each browser_automation run starts with empty localStorage (demo workspace), so click workspace-mine in every script. Cleanup: tests_saas/cleanup_users.py, plus delete workspace_events by user_id.",
+  "test_credentials": "See /app/memory/test_credentials.md (clerk_token.py tickets/tokens).",
+  "rca of the issue": "Reconcile stale dashboards: ReconcileInner useState(PRESETS[0].da/db) runs without checking ws. The useEffect resets a/b/da/db only when `a` is not among the user's metrics. Sample metrics.csv contains m_rev_sales, so the reset is skipped and da='d_sales_qbr' stays. The <select> has no matching option and so shows 'Any dashboard', while run() sends dashboard_a=d_sales_qbr. run_reconcile then raises KeyError and the API returns 404 with detail \"'d_sales_qbr'\"."
+}

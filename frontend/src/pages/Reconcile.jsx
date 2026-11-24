@@ -38,12 +38,17 @@ function ReconcileInner() {
     const { ws } = useWorkspace();
     const sorted = useMemo(() => [...(metrics.data ?? [])].sort((x, y) => x.name.localeCompare(y.name)), [metrics.data]);
     useEffect(() => {
-        if (!sorted.length || sorted.some((m) => m.id === a))
+        if (!sorted.length)
             return;
-        setA(sorted[0].id); setDa("");
-        setB((sorted[1] ?? sorted[0]).id); setDb("");
+        const known = new Set((dashes.data ?? []).map((d) => d.id));
+        if (!known.has(da)) setDa("");
+        if (!known.has(db)) setDb("");
+        if (sorted.some((m) => m.id === a))
+            return;
+        setA(sorted[0].id);
+        setB((sorted[1] ?? sorted[0]).id);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [sorted]);
+    }, [sorted, dashes.data]);
     async function run(pa = a, pda = da, pb = b, pdb = db) {
         setErr(null);
         const q = new URLSearchParams({ a: pa, b: pb, ...(pda ? { dashboard_a: pda } : {}), ...(pdb ? { dashboard_b: pdb } : {}) });

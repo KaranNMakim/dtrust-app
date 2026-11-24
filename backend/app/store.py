@@ -117,7 +117,8 @@ class Store:
         m.formula_tokens = fx.data_tokens(m.formula)
         if m.glossary_term_id and m.glossary_term_id not in self.glossary:
             # Placeholder until the glossary is uploaded, so metrics can arrive first.
-            label = m.glossary_term_id.removeprefix("g_").replace("_", " ").title()
+            raw = m.glossary_term_id.removeprefix("g_").replace("_", " ")
+            label = raw.upper() if len(raw) <= 4 else raw.title()
             self.glossary[m.glossary_term_id] = GlossaryTerm(m.glossary_term_id, label, "", None, [], [label.lower()])
             self.node_names[m.glossary_term_id] = ("GlossaryTerm", label)
         self.metrics[m.id] = m

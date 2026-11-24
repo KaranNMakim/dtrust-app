@@ -13,13 +13,14 @@ export default function MetricDetail() {
     const [msg, setMsg] = useState(null);
     const [owner, setOwner] = useState("");
     const [exported, setExported] = useState(null);
+    const [exportMsg, setExportMsg] = useState(null);
     async function doExport(format) {
-        setMsg(null);
+        setExportMsg(null);
         try {
             setExported(await api(`/metrics/${id}/export?format=${format}`, undefined, { paid: true }));
         }
         catch (e) {
-            setMsg(e.message);
+            setExportMsg(e.message);
         }
     }
     async function act(path, body = {}) {
@@ -80,6 +81,7 @@ export default function MetricDetail() {
                   <Button variant="outline" className="flex-1" data-testid="export-dbt" onClick={() => doExport("dbt")}>dbt MetricFlow</Button>
                   <Button variant="outline" className="flex-1" data-testid="export-databricks" onClick={() => doExport("databricks")}>Databricks</Button>
                 </div>
+                {exportMsg && <p data-testid="export-message" className="text-xs text-red-700">{exportMsg}</p>}
                 <Link className="block text-xs text-primary" to={`/reconcile?a=${id}`}>Reconcile with another metric →</Link>
               </Card>
               <Card>

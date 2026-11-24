@@ -35,7 +35,12 @@ function GraphInner() {
       </div>
       <ErrorNote error={error}/>
       <div className="grid gap-4 lg:grid-cols-[1fr_280px]">
-        {data && <TrustGraph nodes={data.nodes} edges={data.edges} onSelect={onSelect} focus={center}/>}
+        {data && data.nodes.length === 0 && (<Card data-testid="graph-empty" className="flex h-64 flex-col items-center justify-center text-center">
+            <p className="font-semibold">Nothing to draw yet</p>
+            <p className="mt-1 text-sm text-muted-foreground">Add metrics, dashboards and lineage to see how trust flows through your data.</p>
+            <Link to="/ingest" className="mt-3 text-sm text-primary">Add your data →</Link>
+          </Card>)}
+        {data && data.nodes.length > 0 && <TrustGraph nodes={data.nodes} edges={data.edges} onSelect={onSelect} focus={center}/>}
         <div className="space-y-4">
           <Card>
             <CardTitle className="mb-2">Legend</CardTitle>
