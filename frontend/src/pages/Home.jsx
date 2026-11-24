@@ -1,108 +1,118 @@
+import { Link, useNavigate } from "react-router-dom";
+import { ArrowRight, GitCompareArrows, MessageSquareText, Wrench } from "lucide-react";
 import { issueType } from "@/lib/format";
-import { Link } from "react-router-dom";
-import { useNavigate } from "react-router-dom";
-import { useState } from "react";
 import { useApi } from "@/lib/api";
 import { zoneColor, zoneLabel } from "@/lib/utils";
 import { CostTag, useWorkspace } from "@/lib/workspace";
-import { Button, Card, CardTitle, ErrorNote, Input, ScoreRing, SeverityBadge, Hint } from "@/components/dt-ui";
-function EmptyWorkspace({ data }) {
-    const { ws } = useWorkspace();
-    if (ws !== "mine" || !data || data.metrics > 0)
-        return null;
-    return (<Card data-testid="empty-workspace" className="border-primary/30 bg-primary/5">
+import { Button, Card, CardTitle, ErrorNote, Hint, ScoreRing } from "@/components/dt-ui";
+
+const ZONE_HINT = {
+    green: "Score 80 or more: approved definition, clear owner, documented data trail and up to date.",
+    yellow: "Score 50 to 79: usable, but check the warnings before quoting it to leadership.",
+    red: "Score under 50: missing an owner, a reliable definition or fresh data. Don't act on it yet.",
+};
+
+function EmptyWorkspace() {
+    return (<Card data-testid="empty-workspace" className="space-y-3 border-primary/30 bg-primary/5">
       <p className="font-semibold">Your workspace is empty</p>
-      <p className="mt-1 text-sm text-muted-foreground">
-        Add metric definitions from a Power BI or Tableau file, or upload glossary, metric, dashboard and lineage CSVs. Each upload uses 1 credit, and everything you add is saved.
+      <p className="text-sm text-muted-foreground">
+        Add your first metrics from Power BI, Tableau or CSV, or explore the Acme demo first.
       </p>
-      <Link to="/ingest" data-testid="empty-workspace-ingest"><Button className="mt-4">Add your data</Button></Link>
+      <div className="flex flex-wrap gap-2">
+        <Link to="/ingest" data-testid="empty-workspace-ingest"><Button>Add data</Button></Link>
+        <span className="self-center text-sm text-muted-foreground">or choose "Workspace: Acme (demo)" in the sidebar</span>
+      </div>
     </Card>);
+}
+
+function Step({ n, icon: Icon, title, text }) {
+    return (<div className="flex gap-3">
+      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary"><Icon className="h-4 w-4"/></span>
+      <div>
+        <p className="text-sm font-semibold">{n}. {title}</p>
+        <p className="text-xs text-muted-foreground">{text}</p>
+      </div>
+    </div>);
 }
 
 export default function Home() {
     const { data, error } = useApi("/index");
     const { ws } = useWorkspace();
-    const [q, setQ] = useState(ws === "demo" ? "Which revenue metric should I trust?" : "");
     const navigate = useNavigate();
-    return (<div className="mx-auto max-w-6xl space-y-6">
-      <header>
-        <h1 className="text-2xl font-semibold">Enterprise Trust Index</h1>
-        <p className="text-sm text-muted-foreground">How far can leaders trust the numbers and recommendations they act on?</p>
+    const empty = ws === "mine" && data && data.metrics === 0;
+    return (<div className="mx-auto max-w-5xl space-y-6">
+      <header className="space-y-2" data-tour="home-headline">
+        <h1 className="text-3xl font-semibold leading-tight">Two dashboards showing different numbers?</h1>
+        <p className="text-lg text-muted-foreground">Find out why, and which one to trust.</p>
       </header>
       <ErrorNote error={error}/>
-      <EmptyWorkspace data={data}/>
 
-      <form className="flex gap-3" onSubmit={(e) => {
-            e.preventDefault();
-            navigate(`/ask?q=${encodeURIComponent(q)}`);
-        }}>
-        <Input data-testid="home-ask-input" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Ask a trust question…"/>
-        <Button data-testid="home-ask-submit" type="submit" className="h-11 whitespace-nowrap">Ask <CostTag/></Button>
-      </form>
-
-      <Card className="flex items-center justify-between border-primary/30 bg-primary/5">
-        <div>
-          <p className="font-semibold">Two dashboards showing different numbers?</p>
-          <p className="text-sm text-muted-foreground">See every reason they differ and a bridge from one number to the other.</p>
+      <Card className="space-y-5 border-primary/30" data-testid="home-primary">
+        <div className="flex flex-wrap gap-3">
+          <Button data-testid="home-reconcile-link" className="h-11 px-6 text-base" onClick={() => navigate("/reconcile")}>
+            <GitCompareArrows className="h-4 w-4"/> Compare two numbers <CostTag/>
+          </Button>
+          <Button data-testid="home-ask-link" variant="outline" className="h-11 px-6 text-base" onClick={() => navigate(ws === "demo" ? `/ask?q=${encodeURIComponent("Which revenue metric should I trust?")}` : "/ask")}>
+            <MessageSquareText className="h-4 w-4"/> Ask a question
+          </Button>
         </div>
-        <Link to="/reconcile" data-testid="home-reconcile-link"><Button variant="outline">Compare two numbers</Button></Link>
+        <div className="grid gap-4 border-t border-border pt-4 md:grid-cols-3" data-testid="home-steps">
+          <Step n={1} icon={GitCompareArrows} title="Pick two numbers" text="Two tiles that should match but don't."/>
+          <Step n={2} icon={ArrowRight} title="See every reason" text="Definitions, hidden filters, dates, sources, step by step."/>
+          <Step n={3} icon={Wrench} title="Fix it for good" text="Agree one definition and record the decision."/>
+        </div>
       </Card>
 
-      {data && !(ws === "mine" && data.metrics === 0) && (<>
-          <div className="grid gap-6 md:grid-cols-3">
-            <Card className="flex items-center gap-6">
-              <ScoreRing score={data.index} zone={data.zone} size={128}/>
+      {empty && <EmptyWorkspace/>}
+
+      {data && !empty && (<section className="space-y-3" data-testid="home-health">
+          <h2 className="text-lg font-semibold">Health of your numbers</h2>
+          <div className="grid gap-4 md:grid-cols-3">
+            <Card className="flex items-center gap-5">
+              <ScoreRing score={data.index} zone={data.zone} size={112} hint="The Trust Index is the average trust score of all your metrics, weighted by how many people view them. Each metric is scored 0–100 on its definition, owner, data trail, consistent use and freshness."/>
               <div className="text-sm">
-                <p className="font-semibold">Viewer-weighted trust</p>
-                <p className="text-muted-foreground">{data.metrics} metrics · {data.certified} certified</p>
+                <p className="font-semibold"><Hint text="How far leaders can trust the numbers they see, 0 to 100.">Trust Index</Hint></p>
+                <p className="text-muted-foreground">How far leaders can trust the numbers they see, 0–100.</p>
+                <p className="mt-1 text-xs text-muted-foreground">{data.metrics} metrics · {data.certified} approved</p>
               </div>
             </Card>
             <Card>
-              <CardTitle>Metrics by trust zone</CardTitle>
-              <ZoneBar zones={data.zones}/>
+              <CardTitle>Metrics by trust level</CardTitle>
+              <div className="mt-3 space-y-2">
+                {["green", "yellow", "red"].map((z) => (<div key={z} className="flex items-center justify-between text-sm">
+                    <Hint text={ZONE_HINT[z]} className="flex items-center gap-2 no-underline">
+                      <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: zoneColor[z] }}/>
+                      <span className="underline decoration-dotted decoration-muted-foreground/60 underline-offset-4">{zoneLabel[z]}</span>
+                    </Hint>
+                    <span className="font-semibold">{data.zones[z]}</span>
+                  </div>))}
+              </div>
             </Card>
             <Card>
-              <CardTitle>Open issues</CardTitle>
-              <p className="mt-3 text-3xl font-semibold">{data.conflicts_open}</p>
-              <p className="text-sm text-muted-foreground"><Hint text="Issues that affect leadership dashboards or certified numbers. They take the most points off trust scores.">{data.conflicts_critical} critical</Hint></p>
-              <CardTitle className="mt-4">AI recommendations</CardTitle>
-              <p className="mt-1 text-sm">
-                {["green", "yellow", "red"].map((z) => (<span key={z} className="mr-3" style={{ color: zoneColor[z] }}>
-                    {data.recommendations[z]} {zoneLabel[z].toLowerCase()}
-                  </span>))}
+              <CardTitle>Issues to fix</CardTitle>
+              <p className="mt-2 text-3xl font-semibold">{data.conflicts_open}</p>
+              <p className="text-sm text-muted-foreground">
+                <Hint text="Urgent issues affect executive dashboards or create data loops. Fix these first.">{data.conflicts_critical} urgent</Hint>
               </p>
             </Card>
           </div>
 
-          <Card>
-            <div className="mb-3 flex items-center justify-between">
-              <CardTitle>Biggest issues, by dashboards affected</CardTitle>
-              <Link to="/conflicts" className="text-sm text-primary">See all issues to fix</Link>
+          <Card data-tour="home-issues">
+            <div className="mb-2 flex items-center justify-between">
+              <CardTitle>Top issues</CardTitle>
+              <Link to="/conflicts" className="text-sm text-primary">See all issues</Link>
             </div>
-            <table className="w-full text-sm">
-              <tbody>
-                {data.top_conflicts.map((c) => (<tr key={c.id} className="border-t border-border">
-                    <td className="py-2 pr-3"><SeverityBadge severity={c.severity}/></td>
-                    <td className="py-2 pr-3 text-xs text-muted-foreground">{issueType(c.code)}</td>
-                    <td className="py-2 pr-3">{c.title}</td>
-                    <td className="py-2 text-right text-muted-foreground">{c.blast_radius} dashboards</td>
-                  </tr>))}
-              </tbody>
-            </table>
+            <ul className="divide-y divide-border">
+              {data.top_conflicts.slice(0, 3).map((c) => (<li key={c.id} className="flex items-center justify-between gap-3 py-2.5">
+                  <span>
+                    <span className="block text-sm font-medium">{c.title}</span>
+                    <span className="text-xs text-muted-foreground">{issueType(c.code)} · affects {c.blast_radius} dashboard{c.blast_radius === 1 ? "" : "s"}</span>
+                  </span>
+                  <Link to="/conflicts" className="text-sm font-medium text-primary">Fix →</Link>
+                </li>))}
+              {!data.top_conflicts.length && <li className="py-2 text-sm text-muted-foreground">No issues left. Your numbers agree.</li>}
+            </ul>
           </Card>
-        </>)}
-    </div>);
-}
-function ZoneBar({ zones }) {
-    const total = zones.green + zones.yellow + zones.red || 1;
-    return (<div className="mt-4 space-y-3">
-      <div className="flex h-4 w-full overflow-hidden rounded-full">
-        {["green", "yellow", "red"].map((z) => (<div key={z} style={{ width: `${(zones[z] / total) * 100}%`, background: zoneColor[z] }}/>))}
-      </div>
-      <div className="flex justify-between text-xs">
-        {["green", "yellow", "red"].map((z) => (<span key={z} style={{ color: zoneColor[z] }}>
-            {zones[z]} {zoneLabel[z].toLowerCase()}
-          </span>))}
-      </div>
+        </section>)}
     </div>);
 }

@@ -35,7 +35,7 @@ def test_sales_qbr_vs_board_bridge_closes(store):
     assert br["start"] == 1258.3 and br["end"] == 1128.0
     assert br["closes"]
     labels = [s["label"] for s in br["steps"]]
-    assert "Remove filter region<>'Exports'" in labels
+    assert "Remove hidden filter: excludes region Exports" in labels
     assert any(s["cause"] == "unexplained" for s in br["steps"])  # 6.3 not explained by structure
     assert 0.9 < br["explained_share"] < 1.0
     causes = {c["cause"] for c in r["causes"]}
@@ -46,7 +46,7 @@ def test_each_finding_has_its_own_impact(store):
     r = reconcile(store, "m_rev_sales", "m_net_rev_fin", "d_sales_qbr", "d_board")
     impacts = {c["finding"]: c["impact"] for c in r["causes"]}
     assert impacts["Revenue (Sales) does not deduct returns; Net Revenue (Finance) does"] == -38.5
-    assert impacts["Revenue (Sales) applies stage='Closed Won' in the formula"] is None
+    assert impacts["Revenue (Sales) only counts part of the data in the formula (only stage Closed Won)"] is None
 
 
 def test_ecom_bridge_fully_explained(store):

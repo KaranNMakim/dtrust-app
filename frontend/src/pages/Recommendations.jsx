@@ -8,7 +8,7 @@ export default function RecommendationsPage() {
     return (<div className="mx-auto max-w-6xl space-y-5">
       <header>
         <h1 className="text-2xl font-semibold">AI recommendations</h1>
-        <p className="text-sm text-muted-foreground">Model confidence is not trust. Each recommendation is scored on explainability, data quality, history and policy.</p>
+        <p className="text-sm text-muted-foreground">A model being confident isn't the same as being trustworthy. Each recommendation is scored on whether it explains itself, the quality of the data it uses, its track record and company rules.</p>
       </header>
       <ErrorNote error={error}/>
       <div className="grid gap-5 md:grid-cols-[3fr_2fr]">

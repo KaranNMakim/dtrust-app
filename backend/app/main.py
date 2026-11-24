@@ -19,6 +19,7 @@ from .ask import ask as run_ask
 from .calibration import calibrate
 from .extractors import extract_powerbi, extract_tableau
 from .migration import plan as migration_plan
+from .explain import explain as explain_issue, impact_for
 from .reconcile import reconcile as run_reconcile
 from .config import settings
 from .engine import ActionError, TrustEngine, conflict_dict, score_dict
@@ -270,7 +271,7 @@ def list_conflicts(code: str | None = None, status: str | None = "open", severit
         rows = [c for c in rows if c.status == status]
     if severity:
         rows = [c for c in rows if c.severity == severity]
-    return [conflict_dict(c) for c in rows]
+    return [{**conflict_dict(c), "impact": impact_for(engine, c)} for c in rows]
 
 
 class ConflictPatch(BaseModel):
@@ -284,6 +285,85 @@ def conflict_plan(conflict_id: str):
         return migration_plan(engine, conflict_id)
     except KeyError as exc:
         raise problem(404, "Conflict not found", conflict_id) from exc
+
+
+@router.get("/api/v1/conflicts/{conflict_id}/explain")
+def conflict_explain(conflict_id: str):
+    """Plain-language explanation of an issue: what, where from, why it matters, what a fix changes."""
+    try:
+        return explain_issue(engine, conflict_id)
+    except KeyError as exc:
+        raise problem(404, "Issue not found", "That issue no longer exists. It may already be fixed.") from exc
+
+
+class VariantChoice(BaseModel):
+    metric_id: str
+    action: Literal["rename", "retire"]
+    term: str | None = None
+    definition: str | None = None
+    new_name: str | None = None
+
+
+class ChecklistItem(BaseModel):
+    title: str
+    owner: str | None = None
+    done: bool = False
+
+
+class FixBody(BaseModel):
+    canonical_id: str | None = None
+    variants: list[VariantChoice] = []
+    owner_email: str | None = Field(None, pattern=r"^[^@\s]+@[^@\s]+$")
+    reason: str | None = None
+    checklist: list[ChecklistItem] = []
+
+
+@router.post("/api/v1/conflicts/{conflict_id}/preview")
+def conflict_preview(conflict_id: str, body: FixBody):
+    """Free: what would this fix change? Nothing is modified."""
+    try:
+        return engine.preview_fix(conflict_id, body.canonical_id, [v.model_dump() for v in body.variants],
+                                  body.owner_email)
+    except KeyError as exc:
+        raise problem(404, "Issue not found", "That issue no longer exists. It may already be fixed.") from exc
+
+
+@router.post("/api/v1/conflicts/{conflict_id}/fix")
+def conflict_fix(conflict_id: str, body: FixBody, who: str = Depends(actor), uid: str | None = Depends(paid_action)):
+    """Apply a guided fix and write a decision record. Free in the demo; 1 credit in your own workspace."""
+    from datetime import datetime, timezone
+
+    out = _act(engine.apply_fix, conflict_id, who, body.reason or "", body.canonical_id,
+               [v.model_dump() for v in body.variants], body.owner_email,
+               [c.model_dump() for c in body.checklist], datetime.now(timezone.utc).isoformat(timespec="seconds"))
+    charge(uid, "fix", out["issue_title"])
+    return out
+
+
+class DismissBody(BaseModel):
+    reason: str = Field(..., min_length=3)
+
+
+@router.post("/api/v1/conflicts/{conflict_id}/dismiss")
+def conflict_dismiss(conflict_id: str, body: DismissBody, who: str = Depends(actor)):
+    from datetime import datetime, timezone
+
+    return _act(engine.dismiss_issue, conflict_id, who, body.reason,
+                datetime.now(timezone.utc).isoformat(timespec="seconds"))
+
+
+@router.get("/api/v1/decisions")
+def list_decisions():
+    return list(reversed(engine.decisions))
+
+
+class ChecklistToggle(BaseModel):
+    done: bool
+
+
+@router.patch("/api/v1/decisions/{decision_id}/checklist/{index}")
+def toggle_checklist(decision_id: str, index: int, body: ChecklistToggle, who: str = Depends(actor)):
+    return _act(engine.set_checklist_item, decision_id, index, body.done, who)
 
 
 @router.patch("/api/v1/conflicts/{conflict_id}")

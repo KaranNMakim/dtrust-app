@@ -7,7 +7,7 @@ function Side() {
       <div className="max-w-md space-y-4">
         <h1 className="text-4xl font-semibold leading-tight">Why don&apos;t these two numbers agree, and which one should I trust?</h1>
         <p className="text-sm text-muted-foreground">
-          Trust scores for every metric and AI recommendation, a numeric bridge between conflicting dashboards, and migration plans that publish the winning definition.
+          See why two dashboards disagree, which number to trust, and fix it for good. Try it free on a sample company, no setup needed.
         </p>
         <ul className="space-y-2 text-sm">
           {["Free Acme demo: try every feature on a sample company", "Your own workspace, saved and private to you", "3 free credits to start on your own data"].map((t) => (<li key={t} className="flex items-start gap-2"><ShieldCheck className="mt-0.5 h-4 w-4 text-primary"/>{t}</li>))}

@@ -102,7 +102,7 @@ export default function IngestPage() {
     }
     return (<div className="mx-auto max-w-4xl space-y-4">
       <h1 className="text-2xl font-semibold">Add data</h1>
-      <p className="text-sm text-muted-foreground">Metadata only: no row-level data ever leaves your systems. Scores recompute after every upload. Each upload uses 1 credit and is saved to your workspace.</p>
+      <p className="text-sm text-muted-foreground">Bring in metric definitions from Power BI, Tableau or spreadsheets. Only definitions are read, never your actual data. Each upload uses 1 credit and is saved to your workspace.</p>
       <DemoNotice />
       <BiExtract />
       {TYPES.map((t) => (<Card key={t.key} className="space-y-2">

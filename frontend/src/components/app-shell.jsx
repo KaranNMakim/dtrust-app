@@ -9,6 +9,7 @@ import { useWaitlist } from "@/components/waitlist-dialog";
 import { Dropdown, MenuItem } from "@/components/dropdown";
 import { Hint } from "@/components/dt-ui";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { TourHost, replayTour } from "@/components/tour";
 
 const UNLOCK = {
     ask: "Get a plain-English answer about your own metrics: which number to trust, why, and who owns it.",
@@ -97,6 +98,7 @@ function NavItem({ item, muted }) {
 }
 
 function Sidebar() {
+    const { ws, setWs } = useWorkspace();
     return (<aside className="w-60 shrink-0 border-r border-border bg-muted/60 px-4 py-6">
       <Link to="/" className="mb-8 block px-2 text-base font-semibold" data-testid="brand-link" title="Overview">
         Decision Trust
@@ -108,6 +110,9 @@ function Sidebar() {
           </div>))}
       </nav>
       <WorkspaceSwitcher />
+      <button data-testid="replay-tour" onClick={() => { replayTour(); if (ws !== "demo") setWs("demo"); }} className="mt-4 px-2 text-xs text-muted-foreground hover:text-foreground hover:underline">
+        Replay tour (Acme demo)
+      </button>
     </aside>);
 }
 
@@ -129,6 +134,7 @@ export default function AppShell() {
         <main className="flex-1 px-8 py-6">
           <TopBar />
           <Outlet key={ws}/>
+          <TourHost />
         </main>
       </div>
     </CreditsProvider>

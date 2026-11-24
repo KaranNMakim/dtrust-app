@@ -29,6 +29,16 @@ Later requests: a free Basic plan with basic features outside the paywall; a pre
 - Sample files can be downloaded from /samples/* on the Ingest page.
 - Tests: iteration_3 backend 28/28. Its Reconcile stale-dashboard bug and the robustness notes are fixed.
 
+## UX round 2 (2026-11-24, made directly in the repo)
+- Home: one job ("Two dashboards showing different numbers?"), Compare / Ask buttons, 3-step strip, "Health of your numbers" with explained numbers; empty-workspace card for My workspace.
+- Issues to fix: plain-language cards (type, Urgent / Should fix with reason, impact line, one "Fix this" button). Expanded card answers What's wrong / Where it comes from / Why it matters / What happens if you fix it. Readable visuals per type (loop diagram, overrides table, owner card, definition comparison). No raw JSON.
+- Guided Fix flow (side drawer): choose the official definition → rename or retire each other version (live preview of Trust Index and tile changes) → reason + follow-up checklist → Apply. Retired metrics' dashboard tiles are repointed to the chosen definition. Every fix or dismissal writes a Decision Record (Decisions tab, checklist can be ticked). Resolve / Dismiss / Migration plan buttons removed; "Not a real issue" link records a dismissal.
+- New API: GET /api/v1/conflicts/{id}/explain, POST /conflicts/{id}/preview (free), POST /conflicts/{id}/fix (free in demo, 1 credit in My workspace), POST /conflicts/{id}/dismiss, GET /api/v1/decisions, PATCH /decisions/{id}/checklist/{i}. Conflicts list now includes `impact`. Fix/dismiss/checklist are engine methods, so My workspace replays them from the event log.
+- Compare two numbers: headline with both values and the gap, plain step labels, reason legend (no trust colours except amber for "Not yet explained"), reasons grouped in cards, plain formulas and filters, "Fix this for good" call to action. Auto-runs in the demo only.
+- First-visit tour (4 steps, Acme demo only), "Replay tour" link in the sidebar.
+- Plain-language pass on issue titles, score checks (One agreed definition, Clear owner, Where the data comes from, Used as defined, Up to date), evidence lines, page helper text and plain formulas (formula_plain on metrics, Ask and Compare).
+- Tests: backend/tests 68 passed (new tests/test_fix_flow.py). Frontend not built in that environment; please run a full UI test.
+
 ## Known limits
 - Razorpay keys missing, so Buy is disabled. Owner was asked about UPI options (Razorpay supports UPI) and hasn't answered yet.
 - Demo workspaces live in memory and reset on restart (fine). My workspace is replayed from its event log the first time it's opened after a restart. Engines are held in memory with no eviction.

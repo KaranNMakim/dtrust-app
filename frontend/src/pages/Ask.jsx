@@ -45,6 +45,10 @@ function AskInner() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
     return (<div className="mx-auto max-w-4xl space-y-5">
+      <header>
+        <h1 className="text-2xl font-semibold">Ask</h1>
+        <p className="text-sm text-muted-foreground">Ask in plain English which number to trust, why two numbers differ, or who owns a metric. Answers come only from your metadata, with sources.</p>
+      </header>
       <form className="flex gap-3" onSubmit={(e) => { e.preventDefault(); run(q); }}>
         <Input data-testid="ask-input" value={q} onChange={(e) => setQ(e.target.value)}/>
         <Button data-testid="ask-submit" type="submit" className="h-11 whitespace-nowrap" disabled={busy}>{busy ? "Thinking…" : <>Ask <CostTag/></>}</Button>
@@ -65,9 +69,9 @@ function Answer({ res }) {
           <div className="space-y-2">
             <CertBadge certification={cm.certification}/>
             <Link to={`/metrics/${cm.id}`} className="block text-xl font-semibold hover:underline">{cm.name}</Link>
-            <p className="font-mono text-xs text-muted-foreground">{cm.formula}</p>
+            <p className="text-sm text-muted-foreground">Calculated as: {cm.formula_plain ?? cm.formula}</p>
             <p className="text-sm">Owner: {cm.owner.name ?? "none"} · {cm.owner.team ?? "no team"}</p>
-            {res.lineage && <p className="text-xs text-muted-foreground">Lineage: {res.lineage.join(" → ")}</p>}
+            {res.lineage && <p className="text-xs text-muted-foreground">Where the data comes from: {res.lineage.join(" → ")}</p>}
           </div>
           <ScoreRing score={cm.trust_score} zone={cm.zone}/>
         </Card>)}

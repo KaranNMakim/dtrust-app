@@ -25,7 +25,7 @@ function GraphInner() {
     const onSelect = useCallback((n) => setSel(n), []);
     return (<div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
-        <h1 className="mr-4 text-2xl font-semibold">Trust Graph</h1>
+        <span className="mr-4"><h1 className="text-2xl font-semibold">Trust Graph</h1><span className="block text-xs text-muted-foreground">How data flows from source systems to metrics and dashboards, coloured by trust. Click anything to see more.</span></span>
         {CENTERS.filter((c) => ws === "demo" || !c.id).map((c) => (<button key={c.id || "all"} onClick={() => setCenter(c.id)} className={`rounded-full border px-3 py-1 text-xs ${center === c.id ? "border-primary bg-primary/10" : "border-border bg-white"}`}>
             {c.label}
           </button>))}
@@ -37,7 +37,7 @@ function GraphInner() {
       <div className="grid gap-4 lg:grid-cols-[1fr_280px]">
         {data && data.nodes.length === 0 && (<Card data-testid="graph-empty" className="flex h-64 flex-col items-center justify-center text-center">
             <p className="font-semibold">Nothing to draw yet</p>
-            <p className="mt-1 text-sm text-muted-foreground">Add metrics, dashboards and lineage to see how trust flows through your data.</p>
+            <p className="mt-1 text-sm text-muted-foreground">Add metrics, dashboards and where their data comes from to see how trust flows through your data.</p>
             <Link to="/ingest" className="mt-3 text-sm text-primary">Add your data →</Link>
           </Card>)}
         {data && data.nodes.length > 0 && <TrustGraph nodes={data.nodes} edges={data.edges} onSelect={onSelect} focus={center}/>}
@@ -48,7 +48,7 @@ function GraphInner() {
                 <span className="inline-block h-3 w-3 rounded-full" style={{ background: zoneColor[z] }}/>
                 {zoneLabel[z]} {z === "green" ? "80+" : z === "yellow" ? "50–79" : "under 50"}
               </p>))}
-            <p className="mt-2 text-xs text-muted-foreground">Dashed edge = undocumented lineage · thick border = certified</p>
+            <p className="mt-2 text-xs text-muted-foreground">Dashed line = data link that isn't documented · thick border = approved official definition</p>
           </Card>
           {sel && (<Card>
               <p className="text-xs text-muted-foreground">{sel.label}</p>

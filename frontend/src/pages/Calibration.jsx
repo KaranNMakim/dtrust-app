@@ -3,8 +3,8 @@ import { api, useApi } from "@/lib/api";
 import { zoneColor, zoneOf } from "@/lib/utils";
 import { Button, Card, CardTitle, ErrorNote, ScorePill } from "@/components/dt-ui";
 const LABEL = {
-    definition: "Definition consistency", ownership: "Ownership clarity", lineage: "Lineage completeness",
-    usage: "Usage consistency", freshness: "Freshness",
+    definition: "One agreed definition", ownership: "Clear owner", lineage: "Where the data comes from",
+    usage: "Used as defined", freshness: "Up to date",
 };
 export default function CalibrationPage() {
     const cal = useApi("/calibration");
@@ -20,7 +20,7 @@ export default function CalibrationPage() {
       <header>
         <h1 className="text-2xl font-semibold">Does the score predict trouble?</h1>
         <p className="text-sm text-muted-foreground">
-          Backtest against the incident log: restatements, executive disputes and decisions taken on a wrong number.
+          Checks whether low trust scores really point to trouble, using past incidents: restated numbers, arguments in leadership meetings and decisions taken on a wrong number.
         </p>
       </header>
       <ErrorNote error={cal.error}/>

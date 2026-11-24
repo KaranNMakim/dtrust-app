@@ -64,7 +64,7 @@ def test_definition_conflicts_are_charged_once(engine):
 def test_cycle_halves_lineage(engine):
     lin = next(c for c in engine.metric_scores["m_fcst_acc"].components if c.key == "lineage")
     assert lin.raw <= 50
-    assert any("circular" in e.lower() for e in lin.evidence)
+    assert any("loops back on itself" in e.lower() for e in lin.evidence)
 
 
 def test_every_component_has_evidence(engine):

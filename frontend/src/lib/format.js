@@ -1,11 +1,11 @@
 // Single place that turns internal codes and ids into plain business language.
 
 export const ISSUE_TYPE = {
-    C1: "Same term, several definitions",
-    C2: "Same name, different calculation",
-    C3: "Metric with no owner or source",
-    C4: "Data that feeds itself in a loop",
-    C5: "Definition drifted from the glossary",
+    C1: "Same name, different formulas",
+    C2: "Calculated differently on some dashboards",
+    C3: "Nobody owns this metric",
+    C4: "Data loops back on itself",
+    C5: "Doesn't match the official definition",
 };
 
 export const APPROVAL = {

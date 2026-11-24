@@ -38,7 +38,8 @@ function Header({ m, s, actions }) {
         <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-1 text-sm">
           <dt className="text-muted-foreground">Owner</dt><dd data-testid="metric-owner">{m.owner_email ?? "Nobody yet"}</dd>
           <dt className="text-muted-foreground">Team</dt><dd>{m.team ?? "Not set"}</dd>
-          <dt className="text-muted-foreground">Business term</dt><dd>{m.glossary_term ?? "Not linked to the glossary"}</dd>
+          <dt className="text-muted-foreground">Calculated as</dt><dd>{m.formula_plain ?? m.formula}</dd>
+          <dt className="text-muted-foreground">Business definition</dt><dd>{m.glossary_term ?? "Not linked to a business definition"}</dd>
           {m.data_product && (<><dt className="text-muted-foreground">Comes from</dt><dd>{m.data_product}</dd></>)}
         </dl>
         <p className="max-w-2xl text-sm text-muted-foreground">{s.explanation}</p>

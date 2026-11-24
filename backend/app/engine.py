@@ -35,6 +35,7 @@ class TrustEngine:
         self.metric_scores: dict[str, TrustScore] = {}
         self.rec_scores: dict[str, TrustScore] = {}
         self.history: dict[str, list[dict]] = {}
+        self.decisions: list[dict] = []  # readable record of how every issue was fixed or dismissed
         self.graph: dict = {"nodes": [], "edges": []}
         self.recompute()
 
@@ -121,7 +122,7 @@ class TrustEngine:
         m = self._metric(metric_id)
         ts = self.metric_scores[m.id]
         return {
-            "id": m.id, "name": m.name, "formula": m.formula, "grain": m.grain,
+            "id": m.id, "name": m.name, "formula": m.formula, "formula_plain": _plain(m.formula), "grain": m.grain,
             "owner_email": m.owner_email, "team": m.team,
             "glossary_term": self.store.glossary[m.glossary_term_id].term if m.glossary_term_id else None,
             "glossary_term_id": m.glossary_term_id,
@@ -245,6 +246,141 @@ class TrustEngine:
             self.recompute()
             return self.metric_detail(m.id)
 
+    # ------------------------------------------------------------ guided fixes & decision records
+    def _apply_changes(self, conflict_id: str, canonical_id: str | None, variants: list[dict] | None,
+                       owner_email: str | None, actor: str) -> tuple[list[dict], list[str]]:
+        """Apply a fix to this engine. Returns (changes, warnings). Used for real fixes and for previews."""
+        changes: list[dict] = []
+        warnings: list[str] = []
+        store = self.store
+        canon = store.metrics.get(canonical_id) if canonical_id else None
+        for v in variants or []:
+            mid = v.get("metric_id")
+            if mid not in store.metrics or (canon and mid == canon.id):
+                continue
+            m = store.metrics[mid]
+            old_name = m.name
+            if v.get("action") == "rename":
+                term = (v.get("term") or "").strip() or f"{m.name} (distinct)"
+                definition = (v.get("definition") or "").strip() or f"{term}: kept separate from {canon.name if canon else 'the official definition'}."
+                self.rename_variant(mid, term, definition, actor, (v.get("new_name") or "").strip() or None)
+                changes.append({"metric_id": mid, "name": old_name, "action": "rename",
+                                "detail": f"Renamed to '{store.metrics[mid].name}' and given its own business definition"})
+            elif v.get("action") == "retire":
+                if m.certification == "certified":
+                    m.certification = "none"
+                moved = []
+                if canon:
+                    for d in store.dashboards.values():
+                        if mid in d.metric_ids:
+                            d.metric_ids = [canon.id if x == mid else x for x in d.metric_ids]
+                            d.metric_ids = list(dict.fromkeys(d.metric_ids))
+                            d.local_overrides.pop(mid, None)
+                            moved.append(d.name)
+                self.deprecate(mid, actor, f"Replaced by {canon.name}" if canon else "Retired", canon.id if canon else None)
+                detail = "Retired"
+                if moved:
+                    detail += f"; {', '.join(moved)} now show{'s' if len(moved) == 1 else ''} {canon.name}"
+                changes.append({"metric_id": mid, "name": old_name, "action": "retire", "detail": detail})
+        if canon and canon.certification != "certified":
+            try:
+                self.certify(canon.id, actor, "Chosen as the official definition in a fix")
+                changes.append({"metric_id": canon.id, "name": canon.name, "action": "approve",
+                                "detail": "Approved as the official definition"})
+            except ActionError as exc:
+                warnings.append(str(exc))
+        if owner_email:
+            target = conflict_id.split("-", 1)[1] if conflict_id.startswith("C3-") else None
+            if target in store.metrics:
+                self.assign_owner(target, owner_email, actor)
+                changes.append({"metric_id": target, "name": store.name_of(target), "action": "assign_owner",
+                                "detail": f"Owner set to {owner_email}"})
+        self.recompute()
+        still = next((c for c in self.conflicts if c.id == conflict_id and c.status == "open"), None)
+        if still:
+            self._conflict_status[conflict_id] = ("resolved", "Fixed through the guided fix")
+            self.recompute()
+        return changes, warnings
+
+    def preview_fix(self, conflict_id: str, canonical_id: str | None = None, variants: list[dict] | None = None,
+                    owner_email: str | None = None) -> dict:
+        """What would this fix change? Runs on a throwaway copy; nothing here is modified."""
+        import copy
+
+        if not any(c.id == conflict_id for c in self.conflicts):
+            raise KeyError(conflict_id)
+        sim = TrustEngine(copy.deepcopy(self.store), self.now_fn)
+        sim.weights, sim.scoring_version = dict(self.weights), self.scoring_version
+        sim._conflict_status = dict(self._conflict_status)
+        sim.recompute()
+        before = self.index()
+        changes, warnings = sim._apply_changes(conflict_id, canonical_id, variants, owner_email, "preview")
+        after = sim.index()
+        return {"index_before": before["index"], "index_after": after["index"],
+                "issues_before": before["conflicts_open"], "issues_after": after["conflicts_open"],
+                "changes": changes, "warnings": warnings}
+
+    def apply_fix(self, conflict_id: str, actor: str, reason: str, canonical_id: str | None = None,
+                  variants: list[dict] | None = None, owner_email: str | None = None,
+                  checklist: list[dict] | None = None, at: str | None = None) -> dict:
+        if not (reason or "").strip():
+            raise ActionError("Please add a short reason for this decision")
+        with self._lock:
+            issue = next((c for c in self.conflicts if c.id == conflict_id), None)
+            if not issue:
+                raise KeyError(conflict_id)
+            before = self.index()
+            changes, warnings = self._apply_changes(conflict_id, canonical_id, variants, owner_email, actor)
+            after = self.index()
+            return self._decide("fix", issue, actor, reason, at, changes, warnings, checklist, before, after,
+                                canonical_id)
+
+    def dismiss_issue(self, conflict_id: str, actor: str, reason: str, at: str | None = None) -> dict:
+        if not (reason or "").strip():
+            raise ActionError("Please say why this isn't a real issue")
+        with self._lock:
+            issue = next((c for c in self.conflicts if c.id == conflict_id), None)
+            if not issue:
+                raise KeyError(conflict_id)
+            before = self.index()
+            self._conflict_status[conflict_id] = ("dismissed", reason)
+            self._audit(actor, "conflict_dismissed", conflict_id, reason)
+            self.recompute()
+            return self._decide("dismiss", issue, actor, reason, at, [], [], None, before, self.index(), None)
+
+    def set_checklist_item(self, decision_id: str, index: int, done: bool, actor: str) -> dict:
+        with self._lock:
+            d = next((x for x in self.decisions if x["id"] == decision_id), None)
+            if not d or not (0 <= index < len(d["checklist"])):
+                raise KeyError(decision_id)
+            d["checklist"][index]["done"] = bool(done)
+            d["checklist"][index]["updated_by"] = actor
+            return d
+
+    def _decide(self, kind, issue, actor, reason, at, changes, warnings, checklist, before, after, canonical_id) -> dict:
+        from datetime import timezone
+
+        d = {
+            "id": f"dec_{len(self.decisions) + 1}",
+            "kind": kind,
+            "issue_id": issue.id,
+            "issue_code": issue.code,
+            "issue_title": issue.title,
+            "decided_by": actor,
+            "decided_at": at or datetime.now(timezone.utc).isoformat(timespec="seconds"),
+            "reason": reason.strip(),
+            "official_definition": ({"metric_id": canonical_id, "name": self.store.name_of(canonical_id)}
+                                    if canonical_id else None),
+            "changes": changes,
+            "warnings": warnings,
+            "checklist": [{"title": c.get("title", ""), "owner": c.get("owner"), "done": bool(c.get("done"))}
+                          for c in (checklist or [])],
+            "trust_index_before": before["index"],
+            "trust_index_after": after["index"],
+        }
+        self.decisions.append(d)
+        return d
+
     def _audit(self, actor: str, action: str, entity_id: str, reason: str | None, payload: dict | None = None):
         self.store.audit.append({"actor": actor, "action": action, "entity_id": entity_id,
                                  "reason": reason, "payload": payload or {},
@@ -258,6 +394,11 @@ class TrustEngine:
 
 
 # ---------------------------------------------------------------- serialisers & helpers
+
+def _plain(formula: str) -> str:
+    from .explain import plain_formula  # local import: explain depends on the engine's outputs
+    return plain_formula(formula)
+
 
 def _zone(s: float) -> str:
     return "green" if s >= 80 else "yellow" if s >= 50 else "red"

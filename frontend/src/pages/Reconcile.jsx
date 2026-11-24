@@ -19,8 +19,8 @@ function Picker({ label, metric, dash, metrics, dashes, onMetric, onDash }) {
         {metrics.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
       </select>
       <select className="h-9 w-full rounded-md border border-border bg-white px-3 text-xs" value={dash} onChange={(e) => onDash(e.target.value)}>
-        <option value="">Any dashboard (as defined)</option>
-        {showing.map((d) => <option key={d.id} value={d.id}>on {d.name}</option>)}
+        <option value="">As defined (any dashboard)</option>
+        {showing.map((d) => <option key={d.id} value={d.id}>As shown on {d.name}</option>)}
       </select>
     </div>);
 }
@@ -49,6 +49,15 @@ function ReconcileInner() {
         setB((sorted[1] ?? sorted[0]).id);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [sorted, dashes.data]);
+    // In the free demo, run straight away (from a link, the tour, or the first preset). Never auto-spend credits.
+    const [auto, setAuto] = useState(false);
+    useEffect(() => {
+        if (auto || ws !== "demo" || !sorted.length)
+            return;
+        setAuto(true);
+        run(a, da, b, db);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [sorted, ws]);
     async function run(pa = a, pda = da, pb = b, pdb = db) {
         setErr(null);
         const q = new URLSearchParams({ a: pa, b: pb, ...(pda ? { dashboard_a: pda } : {}), ...(pdb ? { dashboard_b: pdb } : {}) });
@@ -62,10 +71,11 @@ function ReconcileInner() {
     
     return (<div className="mx-auto max-w-5xl space-y-5">
       <header>
-        <h1 className="text-2xl font-semibold">Why don&apos;t these two numbers agree?</h1>
-        <p className="text-sm text-muted-foreground">Pick two tiles. Decision Trust lists every structural difference and bridges one number to the other.</p>
+        <h1 className="text-2xl font-semibold">Compare two numbers</h1>
+        <p className="text-sm text-muted-foreground">Pick two numbers that should match. You'll see every reason they differ and how to get from one to the other, step by step.</p>
       </header>
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap items-center gap-2">
+        {ws === "demo" && <span className="text-xs text-muted-foreground">Try:</span>}
         {ws === "demo" && PRESETS.map((p) => (<button key={p.label} data-testid="reconcile-preset" className="rounded-full border border-border bg-white px-3 py-1 text-xs hover:bg-muted" onClick={() => { setA(p.a); setDa(p.da); setB(p.b); setDb(p.db); run(p.a, p.da, p.b, p.db); }}>
             {p.label}
           </button>))}

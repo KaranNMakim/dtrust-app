@@ -200,7 +200,7 @@ def _resolve(engine: TrustEngine, question: str) -> dict:
     for r in rivals:
         rts = engine.metric_scores[r.id]
         rival_rows.append({
-            "metric_id": r.id, "name": r.name, "formula": r.formula,
+            "metric_id": r.id, "name": r.name, "formula": r.formula, "formula_plain": _plainf(r.formula),
             "trust_score": rts.score, "zone": rts.zone,
             "owner": _owner(engine, r),
             "difference": _difference(engine, top, r),
@@ -225,7 +225,7 @@ def _resolve(engine: TrustEngine, question: str) -> dict:
         "found": True,
         "term": g.term,
         "certified_metric": {
-            "id": top.id, "name": top.name, "formula": top.formula,
+            "id": top.id, "name": top.name, "formula": top.formula, "formula_plain": _plainf(top.formula),
             "owner": _owner(engine, top), "certification": top.certification,
             "trust_score": ts.score, "zone": ts.zone,
         },
@@ -238,6 +238,11 @@ def _resolve(engine: TrustEngine, question: str) -> dict:
         "citations": [top.id, *(n for n in [top.data_product_id] if n), *conflict_ids],
         "facts": facts,
     }
+
+
+def _plainf(formula: str) -> str:
+    from .explain import plain_formula
+    return plain_formula(formula)
 
 
 def _lc(text: str) -> str:

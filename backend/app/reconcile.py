@@ -21,18 +21,28 @@ from .store import Store
 CAUSES = {
     "definition": "Different definition",
     "filters": "Hidden filters",
-    "time_logic": "Different time logic",
-    "source": "Different source of truth",
+    "time_logic": "Different dates or calendar",
+    "source": "Different source system",
     "refresh": "Refresh timing",
-    "mapping": "Mappings, hierarchies and units",
+    "mapping": "Mappings and currency",
     "late_adjustments": "Late adjustments",
-    "unexplained": "Unexplained",
+    "unexplained": "Not yet explained",
 }
 
 BASE_MEASURE_NOTES = {
     ("opportunity_amount", "invoice_amount"): "bookings at close date vs invoiced sales",
     ("order_value", "invoice_amount"): "gross order value vs invoiced sales",
 }
+
+
+def _pf(expr: str) -> str:
+    from .explain import plain_filter  # local import: explain depends on this module
+    return plain_filter(expr)
+
+
+def _pformula(formula: str) -> str:
+    from .explain import plain_formula
+    return plain_formula(formula)
 
 
 @dataclass
@@ -115,11 +125,11 @@ def structural_causes(store: Store, a: Side, b: Side) -> list[dict]:
     fa, fb = set(a.filters), set(b.filters)
     for f in sorted(fa - fb):
         where = f"on {a.dashboard}" if a.dashboard and f not in da.filters else "in the formula"
-        out.append(_finding("filters", f"{a.name} applies {f} {where}", "Invisible on the tile: the label stays the same.",
+        out.append(_finding("filters", f"{a.name} {'only counts' if '<>' not in f and 'NOT' not in f.upper() else 'leaves out'} part of the data {where} ({_pf(f)})", "Invisible on the tile: the label stays the same.",
                             key=f"flt:{f}"))
     for f in sorted(fb - fa):
         where = f"on {b.dashboard}" if b.dashboard and f not in db.filters else "in the formula"
-        out.append(_finding("filters", f"{b.name} applies {f} {where}", "Invisible on the tile: the label stays the same.",
+        out.append(_finding("filters", f"{b.name} {'only counts' if '<>' not in f and 'NOT' not in f.upper() else 'leaves out'} part of the data {where} ({_pf(f)})", "Invisible on the tile: the label stays the same.",
                             key=f"flt:{f}"))
 
     # ---- time logic
@@ -148,7 +158,7 @@ def structural_causes(store: Store, a: Side, b: Side) -> list[dict]:
 
     # ---- mapping & units
     if ma.hierarchy_version and mb.hierarchy_version and ma.hierarchy_version != mb.hierarchy_version:
-        out.append(_finding("mapping", f"Hierarchy mapping {ma.hierarchy_version} vs {mb.hierarchy_version}",
+        out.append(_finding("mapping", f"Region and product mapping version {ma.hierarchy_version} vs {mb.hierarchy_version}",
                             "Customers or products sit in different regions or categories."))
     if ma.currency and mb.currency and ma.currency != mb.currency:
         out.append(_finding("mapping", f"Reported in {ma.currency} vs {mb.currency}", "FX rate and conversion date matter."))
@@ -215,17 +225,17 @@ def bridge(store: Store, a: Side, b: Side, period: str | None, causes: list[dict
     hint = "; ".join(c["finding"] for c in causes if c["cause"] in ("mapping", "time_logic", "refresh")) or "no structural cause found"
     start = rep_a if rep_a is not None else model_a
     if rep_a is not None and abs(rep_a - model_a) > 0.05:
-        steps.append({"label": f"Unexplained in {a.name}", "cause": "unexplained", "delta": round(model_a - rep_a, 2),
+        steps.append({"label": f"Not yet explained ({a.name})", "cause": "unexplained", "delta": round(model_a - rep_a, 2),
                       "note": f"Likely: {hint}", "key": "unexplained:a"})
     for expr, v in excl_a:
-        steps.append({"label": f"Remove filter {expr}", "cause": "filters", "delta": round(v, 2), "key": f"flt:{expr}"})
+        steps.append({"label": f"Remove hidden filter: {_pf(expr)}", "cause": "filters", "delta": round(v, 2), "key": f"flt:{expr}"})
 
     da, db = a.definition, b.definition
     ca, cb = _cols(da.base_terms), _cols(db.base_terms)
     if set(ca) != set(cb):
         delta = sum(vals[c] for c in set(cb) - set(ca)) - sum(vals[c] for c in set(ca) - set(cb))
-        names = f"{', '.join(map(humanize, sorted(set(ca) - set(cb))))} → {', '.join(map(humanize, sorted(set(cb) - set(ca))))}"
-        steps.append({"label": f"Base measure: {names}", "cause": "definition", "delta": round(delta, 2), "key": "base"})
+        names = f"{', '.join(map(humanize, sorted(set(ca) - set(cb))))} to {', '.join(map(humanize, sorted(set(cb) - set(ca))))}"
+        steps.append({"label": f"Switch from {names}", "cause": "definition", "delta": round(delta, 2), "key": "base"})
     xa, xb = _cols(da.deduction_terms), _cols(db.deduction_terms)
     for col in sorted(set(xa) - set(xb)):
         cause = "late_adjustments" if col in LATE_ADJUSTMENT_COLUMNS else "definition"
@@ -234,10 +244,10 @@ def bridge(store: Store, a: Side, b: Side, period: str | None, causes: list[dict
         cause = "late_adjustments" if col in LATE_ADJUSTMENT_COLUMNS else "definition"
         steps.append({"label": f"Deduct {humanize(col)}", "cause": cause, "delta": round(-vals[col], 2), "key": f"ded:{col}"})
     for expr, v in excl_b:
-        steps.append({"label": f"Apply filter {expr}", "cause": "filters", "delta": round(-v, 2), "key": f"flt:{expr}"})
+        steps.append({"label": f"Apply filter: {_pf(expr)}", "cause": "filters", "delta": round(-v, 2), "key": f"flt:{expr}"})
     end = rep_b if rep_b is not None else model_b
     if rep_b is not None and abs(rep_b - model_b) > 0.05:
-        steps.append({"label": f"Unexplained in {b.name}", "cause": "unexplained", "delta": round(rep_b - model_b, 2),
+        steps.append({"label": f"Not yet explained ({b.name})", "cause": "unexplained", "delta": round(rep_b - model_b, 2),
                       "note": f"Likely: {hint}", "key": "unexplained:b"})
 
     running = start
@@ -288,7 +298,8 @@ def reconcile(store: Store, metric_a: str, metric_b: str, dashboard_a: str | Non
 def _side_dict(store: Store, s: Side) -> dict:
     m = store.metrics[s.metric_id]
     return {"metric_id": s.metric_id, "name": s.name, "dashboard_id": s.dashboard_id, "dashboard": s.dashboard,
-            "formula": m.formula, "filters": s.filters, "definition": s.definition.to_dict(),
+            "formula": m.formula, "formula_plain": _pformula(m.formula), "filters": s.filters,
+            "filters_plain": [_pf(f) for f in s.filters], "definition": s.definition.to_dict(),
             "time_basis": m.time_basis, "calendar": m.calendar, "currency": m.currency,
             "hierarchy_version": m.hierarchy_version, "certification": m.certification}
 
@@ -308,6 +319,6 @@ def _summary(a: Side, b: Side, causes: list[dict], br: dict | None) -> str:
     biggest = sorted((s for s in br["steps"] if s["cause"] != "unexplained"), key=lambda s: -abs(s["delta"]))[:3]
     parts = ", ".join(f"{s['label'][0].lower() + s['label'][1:]} {s['delta']:+,.1f}" for s in biggest)
     unexplained = round(sum(s["delta"] for s in br["steps"] if s["cause"] == "unexplained"), 1)
-    tail = f" {abs(unexplained):,.1f} is unexplained and needs a look." if unexplained else " The bridge fully closes."
+    tail = f" {abs(unexplained):,.1f} is not yet explained and needs a look." if unexplained else " The bridge fully closes."
     return (f"{la} shows {_fmt(br['start'])} vs {lb} {_fmt(br['end'])} {br['unit']} in {br['period']} "
             f"(gap {br['gap']:+,.1f}). {br['explained_share']:.0%} of the gap is explained; largest drivers: {parts}.{tail}")

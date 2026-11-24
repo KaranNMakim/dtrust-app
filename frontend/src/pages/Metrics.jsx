@@ -7,7 +7,7 @@ export default function MetricsPage() {
     const [q, setQ] = useState("");
     const rows = (data ?? []).filter((m) => (m.name + m.formula + (m.team ?? "")).toLowerCase().includes(q.toLowerCase()));
     return (<div className="mx-auto max-w-6xl space-y-5">
-      <h1 className="text-2xl font-semibold">Metrics</h1>
+      <header><h1 className="text-2xl font-semibold">Metrics</h1><p className="text-sm text-muted-foreground">Every metric in this workspace with its trust score, owner and the dashboards that show it. Open one to see why it scored as it did.</p></header>
       <Input placeholder="Filter by name, formula or team" value={q} onChange={(e) => setQ(e.target.value)}/>
       <ErrorNote error={error}/>
       <Card className="p-0">

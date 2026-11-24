@@ -91,7 +91,7 @@ def _plan_c1(engine, c) -> dict:
          "detail": "Show old and new tiles together, labelled, on: " + (", ".join(exec_dash) or "the affected dashboards") + "."},
         {"step": 5, "title": "Re-baseline targets and incentives", "owner": "Finance and HR",
          "detail": "Translate targets set on the old definition using the reconciliation bridge, so no team is penalised by the change."},
-        {"step": 6, "title": "Retire the old versions", "owner": "Data steward",
+        {"step": 6, "title": "Retire the old versions", "owner": "Data owner",
          "detail": "Deprecate remaining variants, remove old tiles, and confirm this conflict closes on the next recompute."},
     ]
     return {"canonical": {"metric_id": canon.id, "name": canon.name, "trust_score": engine.metric_scores[canon.id].score,
@@ -118,7 +118,7 @@ def _plan_c3(engine, c) -> dict:
     steward = engine.store.glossary[m.glossary_term_id].steward_email if m.glossary_term_id else None
     return {"steps": [
         {"step": 1, "title": "Assign a named owner", "owner": steward or "Data governance lead",
-         "detail": f"{m.team or 'The team on record'} must nominate a person. Suggested interim owner: {steward or 'the domain steward'}.",
+         "detail": f"{m.team or 'The team on record'} must nominate a person. Suggested interim owner: {steward or 'the owner of its business definition'}.",
          "action": {"type": "assign_owner", "endpoint": f"POST /api/v1/metrics/{m.id}/owner"}},
         {"step": 2, "title": "Decide: keep, merge or retire", "owner": "New owner",
          "detail": "An orphan often duplicates a governed metric. Reconcile it against the certified version before keeping it."},
@@ -145,5 +145,5 @@ def _plan_c5(engine, c) -> dict:
     missing = c.detail.get("missing_components", [])
     return {"steps": [
         {"step": 1, "title": "Align the formula or rename the metric", "owner": m.owner_email or "Metric owner",
-         "detail": f"Missing from the glossary definition: {', '.join(missing) or 'n/a'}. Either add them or give the metric a distinct name."},
+         "detail": f"Missing from the official definition: {', '.join(missing) or 'n/a'}. Either add them or give the metric a distinct name."},
     ]}
