@@ -17,7 +17,7 @@ from . import __version__
 from . import exports as exporter
 from .ask import ask as run_ask
 from .calibration import calibrate
-from .extractors import extract_powerbi, extract_tableau
+from .extractors import extract_dbt, extract_powerbi, extract_tableau
 from .migration import plan as migration_plan
 from .explain import explain as explain_issue, impact_for
 from .reconcile import reconcile as run_reconcile
@@ -453,19 +453,27 @@ async def ingest(source_type: Literal["glossary", "metric", "dashboard", "lineag
 
 
 @router.post("/api/v1/extract/{tool}")
-async def extract(tool: Literal["powerbi", "tableau"], file: UploadFile = File(...), commit: bool = False,
+async def extract(tool: Literal["powerbi", "tableau", "dbt"], file: UploadFile = File(...),
+                  file2: UploadFile | None = File(None), commit: bool = False,
                   dashboard: str | None = None, who: str = Depends(actor)):
     """Preview is free; commit=true uses one credit (own workspace only)."""
     uid = None
     if commit:
         own_data_only()
         uid = paid_action()
-    """Read metric definitions from a Power BI model (.tmdl / model.bim) or Tableau workbook (.twb / .twbx).
+    """Read metric definitions from a Power BI model (.tmdl / model.bim), a Tableau workbook (.twb / .twbx),
+    or dbt artifacts (target/manifest.json and/or target/semantic_manifest.json, as file and file2).
     commit=false returns a preview; commit=true adds them to the workspace and recomputes."""
     data = await file.read()
     name = file.filename or tool
     try:
-        if tool == "powerbi":
+        if tool == "dbt":
+            files = [(name, data)]
+            if file2 is not None:
+                files.append((file2.filename or "file2", await file2.read()))
+            res = extract_dbt(files, engine.store.glossary)
+            name = res.source_name
+        elif tool == "powerbi":
             res = extract_powerbi(data.decode("utf-8-sig"), name, engine.store.glossary, dashboard or name.rsplit(".", 1)[0])
         else:
             res = extract_tableau(data, name, engine.store.glossary)
@@ -473,13 +481,15 @@ async def extract(tool: Literal["powerbi", "tableau"], file: UploadFile = File(.
         raise problem(422, "Could not read file", str(exc)) from exc
     out = res.to_dict()
     if commit:
-        apply_extract(engine, res.metrics, res.dashboards)
+        apply_extract(engine, res.metrics, res.dashboards, res.lineage, res.nodes)
         out["summary"] = engine.recompute()
         charge(uid, "extract", name)
-        record("extract", {"metrics": res.metrics, "dashboards": res.dashboards})
+        record("extract", {"metrics": res.metrics, "dashboards": res.dashboards, "lineage": res.lineage,
+                           "nodes": res.nodes})
         _sync_graph()
         engine.store.audit.append({"actor": who, "action": f"extract_{tool}", "entity_id": name, "reason": None,
-                                   "payload": {"metrics": len(res.metrics), "dashboards": len(res.dashboards)}})
+                                   "payload": {"metrics": len(res.metrics), "dashboards": len(res.dashboards),
+                                               "lineage": len(res.lineage)}})
         new_conflicts = [conflict_dict(c) for c in engine.conflicts
                          if c.status == "open" and any(r["metric_id"] in c.entity_ids for r in res.metrics)]
         out["new_conflicts"] = new_conflicts

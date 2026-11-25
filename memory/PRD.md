@@ -39,6 +39,14 @@ Later requests: a free Basic plan with basic features outside the paywall; a pre
 - Plain-language pass on issue titles, score checks (One agreed definition, Clear owner, Where the data comes from, Used as defined, Up to date), evidence lines, page helper text and plain formulas (formula_plain on metrics, Ask and Compare).
 - Tests: backend/tests 68 passed (new tests/test_fix_flow.py). Frontend not built in that environment; please run a full UI test.
 
+## dbt connector (2026-11-25, made directly in the repo)
+- Add data → "dbt": upload target/manifest.json and/or target/semantic_manifest.json (either alone works; the file type is detected from its content). Same endpoint: POST /api/v1/extract/dbt with `file` and optional `file2`; preview free, commit 1 credit in My workspace.
+- Imports: Semantic Layer metrics (simple, ratio, derived; where-filters translated from {{ Dimension(...) }}; cumulative/conversion kept verbatim with a warning), owner/team from metric meta, the semantic model's table as the data product, its time dimension; lineage from manifest.json (models → models → sources, counted as documented); exposures of type dashboard → dashboards.
+- Re-uploading doesn't duplicate lineage. Commit is recorded with lineage, so My workspace replays it.
+- Samples: /samples/acme_dbt_manifest.json and /samples/acme_dbt_semantic_manifest.json. The dbt Net Revenue matches Finance's approved definition; eCom Revenue has no owner (shows up as an issue).
+- Tests: backend/tests 76 passed (tests/test_dbt_extractor.py).
+- Not built yet: live connections (dbt Cloud Discovery API, Power BI Scanner API, Tableau Metadata API). Uploads only.
+
 ## Known limits
 - Razorpay keys missing, so Buy is disabled. Owner was asked about UPI options (Razorpay supports UPI) and hasn't answered yet.
 - Demo workspaces live in memory and reset on restart (fine). My workspace is replayed from its event log the first time it's opened after a restart. Engines are held in memory with no eviction.

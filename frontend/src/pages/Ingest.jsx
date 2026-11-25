@@ -15,6 +15,7 @@ function BiExtract() {
     const { ws } = useWorkspace();
     const [tool, setTool] = useState("powerbi");
     const [file, setFile] = useState(null);
+    const [file2, setFile2] = useState(null);
     const [res, setRes] = useState(null);
     const [err, setErr] = useState(null);
     async function send(commit) {
@@ -22,6 +23,8 @@ function BiExtract() {
             return;
         const fd = new FormData();
         fd.append("file", file);
+        if (tool === "dbt" && file2)
+            fd.append("file2", file2);
         const r = await fetch(`${API}/extract/${tool}?commit=${commit}`, { method: "POST", body: fd, headers: await authHeaders() });
         const body = await r.json();
         if (r.status === 402)
@@ -36,30 +39,44 @@ function BiExtract() {
         setRes(body);
     }
     return (<Card className="space-y-3 border-primary/40">
-      <CardTitle className="text-foreground">Read definitions straight from your BI files</CardTitle>
+      <CardTitle className="text-foreground">Read definitions straight from Power BI, Tableau or dbt</CardTitle>
       <p className="text-xs text-muted-foreground">
-        Power BI: a .tmdl file or model.bim from a project folder. Tableau: a .twb or .twbx workbook. Measures, calculated
-        fields and worksheet filters become governed metrics. Try a sample:{" "}
+        Power BI: a .tmdl file or model.bim from a project folder. Tableau: a .twb or .twbx workbook. dbt: the
+        manifest.json and semantic_manifest.json files from your project's target folder (created by dbt parse).
+        Measures, calculated fields, dbt metrics, filters and lineage become governed metrics. Try a sample:{" "}
         <a data-testid="sample-powerbi" className="text-primary underline" href="/samples/acme_finance.tmdl" download>Power BI model</a>{" · "}
-        <a data-testid="sample-tableau" className="text-primary underline" href="/samples/acme_sales.twb" download>Tableau workbook</a>.
+        <a data-testid="sample-tableau" className="text-primary underline" href="/samples/acme_sales.twb" download>Tableau workbook</a>{" · "}
+        dbt <a data-testid="sample-dbt-manifest" className="text-primary underline" href="/samples/acme_dbt_manifest.json" download>manifest</a>{" + "}
+        <a data-testid="sample-dbt-semantic" className="text-primary underline" href="/samples/acme_dbt_semantic_manifest.json" download>semantic manifest</a>.
       </p>
       <div className="flex flex-wrap items-center gap-3">
-        <select className="h-9 rounded-md border border-border px-2 text-sm" value={tool} onChange={(e) => setTool(e.target.value)}>
+        <select data-testid="extract-tool" className="h-9 rounded-md border border-border px-2 text-sm" value={tool} onChange={(e) => { setTool(e.target.value); setRes(null); setErr(null); }}>
           <option value="powerbi">Power BI (.tmdl / .bim)</option>
           <option value="tableau">Tableau (.twb / .twbx)</option>
+          <option value="dbt">dbt (manifest.json + semantic_manifest.json)</option>
         </select>
-        <input type="file" accept=".tmdl,.bim,.json,.twb,.twbx" onChange={(e) => setFile(e.target.files?.[0] ?? null)} className="text-sm"/>
+        {tool === "dbt" ? (<>
+            <label className="text-xs text-muted-foreground">manifest.json
+              <input data-testid="extract-file" type="file" accept=".json" onChange={(e) => setFile(e.target.files?.[0] ?? null)} className="ml-2 text-sm"/>
+            </label>
+            <label className="text-xs text-muted-foreground">semantic_manifest.json (optional)
+              <input data-testid="extract-file2" type="file" accept=".json" onChange={(e) => setFile2(e.target.files?.[0] ?? null)} className="ml-2 text-sm"/>
+            </label>
+          </>) : (<input data-testid="extract-file" type="file" accept=".tmdl,.bim,.json,.twb,.twbx" onChange={(e) => setFile(e.target.files?.[0] ?? null)} className="text-sm"/>)}
         <Button data-testid="extract-preview" variant="outline" onClick={() => send(false)} disabled={!file}>Preview · free</Button>
         <Button data-testid="extract-commit" onClick={() => send(true)} disabled={!file || ws === "demo"}>Add to my workspace · 1 credit</Button>
       </div>
       {err && <Notice tone="error" data-testid="extract-error">{plainError(err)}</Notice>}
       {res && (<div className="space-y-2 text-xs">
-          <p className="font-medium">{res.metrics.length} metric(s), {res.dashboards.length} dashboard(s) from {res.source_name}</p>
+          <p className="font-medium">
+            {res.metrics.length} metric(s), {res.dashboards.length} dashboard(s)
+            {res.lineage?.length ? `, ${res.lineage.length} data links showing where the data comes from` : ""} from {res.source_name}
+          </p>
           <table className="w-full">
             <tbody>
               {res.metrics.map((m) => (<tr key={m.metric_id} className="border-t border-border align-top">
                   <td className="py-1.5 pr-2 font-medium">{m.name}</td>
-                  <td className="py-1.5 pr-2 font-mono text-muted-foreground">{m.source_expression}</td>
+                  {res.tool !== "dbt" && <td className="py-1.5 pr-2 font-mono text-muted-foreground">{m.source_expression}</td>}
                   <td className="py-1.5 pr-2 font-mono">{m.formula}</td>
                   <td className="py-1.5 text-muted-foreground">{m.glossary_term || "no term"}</td>
                 </tr>))}

@@ -13,10 +13,13 @@ class ExtractResult:
     metrics: list[dict] = field(default_factory=list)      # rows for Store.add_metric
     dashboards: list[dict] = field(default_factory=list)   # rows for Store.add_dashboard
     warnings: list[str] = field(default_factory=list)
+    lineage: list[dict] = field(default_factory=list)      # rows for Store.add_lineage (dbt)
+    nodes: list[dict] = field(default_factory=list)        # {id, label, name}: data products without edges
 
     def to_dict(self) -> dict:
         return {"tool": self.tool, "source_name": self.source_name, "metrics": self.metrics,
-                "dashboards": self.dashboards, "warnings": self.warnings}
+                "dashboards": self.dashboards, "warnings": self.warnings, "lineage": self.lineage,
+                "nodes": self.nodes}
 
 
 def snake(name: str) -> str:

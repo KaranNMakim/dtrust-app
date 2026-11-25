@@ -16,6 +16,7 @@ from clerk_auth import require_user
 from billing import db, ensure_member, spend_credit
 
 from .config import settings
+from .extract_apply import apply_extract  # noqa: F401  (re-exported)
 from .engine import TrustEngine
 from .llm import ClaudeGateway
 from .store import Store
@@ -56,13 +57,6 @@ def apply_ingest(eng: TrustEngine, source_type: str, rows: list[dict], mode: str
     return ok, errors
 
 
-def apply_extract(eng: TrustEngine, metrics: list[dict], dashboards: list[dict]) -> None:
-    for row in metrics:
-        eng.store.add_metric(row)
-    for row in dashboards:
-        eng.store.add_dashboard(row)
-
-
 def _replay(eng: TrustEngine, user_id: str) -> None:
     for ev in events.find({"user_id": user_id}, {"_id": 0}).sort([("seq", 1), ("created_at", 1)]):
         try:
@@ -71,7 +65,7 @@ def _replay(eng: TrustEngine, user_id: str) -> None:
                 apply_ingest(eng, p["source_type"], p["rows"], p["mode"])
                 eng.recompute()
             elif ev["op"] == "extract":
-                apply_extract(eng, p["metrics"], p["dashboards"])
+                apply_extract(eng, p["metrics"], p["dashboards"], p.get("lineage"), p.get("nodes"))
                 eng.recompute()
             elif ev["op"] == "action":
                 getattr(eng, p["method"])(*p["args"], **p["kwargs"])

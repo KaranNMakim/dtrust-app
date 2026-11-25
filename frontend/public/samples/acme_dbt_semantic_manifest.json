@@ -1,0 +1,397 @@
+{
+ "semantic_models": [
+  {
+   "name": "revenue",
+   "description": "",
+   "model": "ref('fct_revenue')",
+   "node_relation": {
+    "alias": "fct_revenue",
+    "schema_name": "analytics",
+    "database": "acme",
+    "relation_name": "acme.analytics.fct_revenue"
+   },
+   "defaults": {
+    "agg_time_dimension": "invoice_date"
+   },
+   "entities": [
+    {
+     "name": "revenue_line",
+     "type": "primary",
+     "expr": "line_id"
+    }
+   ],
+   "measures": [
+    {
+     "name": "invoice_amount",
+     "agg": "sum",
+     "expr": "invoice_amount",
+     "description": "Invoiced amount"
+    },
+    {
+     "name": "returns",
+     "agg": "sum",
+     "expr": "returns",
+     "description": "Credit notes for returns"
+    },
+    {
+     "name": "discounts",
+     "agg": "sum",
+     "expr": "discounts",
+     "description": "On- and off-invoice discounts"
+    },
+    {
+     "name": "rebates",
+     "agg": "sum",
+     "expr": "rebates",
+     "description": "Distributor rebates"
+    }
+   ],
+   "dimensions": [
+    {
+     "name": "invoice_date",
+     "type": "time",
+     "type_params": {
+      "time_granularity": "day"
+     }
+    },
+    {
+     "name": "region",
+     "type": "categorical"
+    },
+    {
+     "name": "channel",
+     "type": "categorical"
+    }
+   ]
+  },
+  {
+   "name": "ecom_orders",
+   "description": "",
+   "model": "ref('fct_ecom_orders')",
+   "node_relation": {
+    "alias": "fct_ecom_orders",
+    "schema_name": "analytics",
+    "database": "acme",
+    "relation_name": "acme.analytics.fct_ecom_orders"
+   },
+   "defaults": {
+    "agg_time_dimension": "order_date"
+   },
+   "entities": [
+    {
+     "name": "ecom_orders_line",
+     "type": "primary",
+     "expr": "line_id"
+    }
+   ],
+   "measures": [
+    {
+     "name": "order_value",
+     "agg": "sum",
+     "expr": "order_value",
+     "description": "Gross order value"
+    },
+    {
+     "name": "refunds",
+     "agg": "sum",
+     "expr": "refunds",
+     "description": "Refunds"
+    },
+    {
+     "name": "orders",
+     "agg": "count_distinct",
+     "expr": "order_id",
+     "description": "Distinct orders"
+    }
+   ],
+   "dimensions": [
+    {
+     "name": "order_date",
+     "type": "time",
+     "type_params": {
+      "time_granularity": "day"
+     }
+    },
+    {
+     "name": "region",
+     "type": "categorical"
+    }
+   ]
+  }
+ ],
+ "metrics": [
+  {
+   "name": "invoice_amount_total",
+   "label": "Invoiced Amount",
+   "description": "Invoiced amount before deductions",
+   "type": "simple",
+   "type_params": {
+    "measure": {
+     "name": "invoice_amount",
+     "filter": null,
+     "alias": null
+    }
+   },
+   "filter": null,
+   "config": {
+    "meta": {
+     "owner": "meera.iyer@acme.com",
+     "team": "Group Finance BI"
+    }
+   }
+  },
+  {
+   "name": "returns_total",
+   "label": "Returns",
+   "description": "",
+   "type": "simple",
+   "type_params": {
+    "measure": {
+     "name": "returns",
+     "filter": null,
+     "alias": null
+    }
+   },
+   "filter": null,
+   "config": {
+    "meta": {
+     "owner": "meera.iyer@acme.com",
+     "team": "Group Finance BI"
+    }
+   }
+  },
+  {
+   "name": "discounts_total",
+   "label": "Discounts",
+   "description": "",
+   "type": "simple",
+   "type_params": {
+    "measure": {
+     "name": "discounts",
+     "filter": null,
+     "alias": null
+    }
+   },
+   "filter": null,
+   "config": {
+    "meta": {
+     "owner": "meera.iyer@acme.com",
+     "team": "Group Finance BI"
+    }
+   }
+  },
+  {
+   "name": "rebates_total",
+   "label": "Rebates",
+   "description": "",
+   "type": "simple",
+   "type_params": {
+    "measure": {
+     "name": "rebates",
+     "filter": null,
+     "alias": null
+    }
+   },
+   "filter": null,
+   "config": {
+    "meta": {
+     "owner": "meera.iyer@acme.com",
+     "team": "Group Finance BI"
+    }
+   }
+  },
+  {
+   "name": "net_revenue",
+   "label": "Net Revenue (dbt)",
+   "description": "Recognised net revenue: invoiced amount less returns, discounts and rebates",
+   "type": "derived",
+   "type_params": {
+    "expr": "invoice_amount_total - returns_total - discounts_total - rebates_total",
+    "metrics": [
+     {
+      "name": "invoice_amount_total",
+      "filter": null,
+      "alias": null
+     },
+     {
+      "name": "returns_total",
+      "filter": null,
+      "alias": null
+     },
+     {
+      "name": "discounts_total",
+      "filter": null,
+      "alias": null
+     },
+     {
+      "name": "rebates_total",
+      "filter": null,
+      "alias": null
+     }
+    ]
+   },
+   "filter": null,
+   "config": {
+    "meta": {
+     "owner": "meera.iyer@acme.com",
+     "team": "Group Finance BI"
+    }
+   }
+  },
+  {
+   "name": "domestic_revenue",
+   "label": "Domestic Revenue",
+   "description": "Net revenue excluding exports",
+   "type": "derived",
+   "type_params": {
+    "expr": "net_revenue",
+    "metrics": [
+     {
+      "name": "net_revenue",
+      "filter": null,
+      "alias": null
+     }
+    ]
+   },
+   "filter": {
+    "where_filters": [
+     {
+      "where_sql_template": "{{ Dimension('revenue_line__region') }} != 'Exports'"
+     }
+    ]
+   },
+   "config": {
+    "meta": {
+     "owner": "li.wei@acme.com",
+     "team": "APAC Finance"
+    }
+   }
+  },
+  {
+   "name": "ecom_revenue",
+   "label": "eCom Revenue",
+   "description": "Gross order value from the online store",
+   "type": "simple",
+   "type_params": {
+    "measure": {
+     "name": "order_value",
+     "filter": null,
+     "alias": null
+    }
+   },
+   "filter": null,
+   "config": {
+    "meta": {}
+   }
+  },
+  {
+   "name": "refund_rate",
+   "label": "Refund Rate",
+   "description": "Share of order value refunded",
+   "type": "ratio",
+   "type_params": {
+    "numerator": {
+     "name": "refunds_total",
+     "filter": null
+    },
+    "denominator": {
+     "name": "ecom_revenue",
+     "filter": null
+    }
+   },
+   "filter": null,
+   "config": {
+    "meta": {
+     "owner": "priya.n@acme.com",
+     "team": "Digital Commerce"
+    }
+   }
+  },
+  {
+   "name": "refunds_total",
+   "label": "Refunds",
+   "description": "",
+   "type": "simple",
+   "type_params": {
+    "measure": {
+     "name": "refunds",
+     "filter": null,
+     "alias": null
+    }
+   },
+   "filter": null,
+   "config": {
+    "meta": {
+     "owner": "priya.n@acme.com",
+     "team": "Digital Commerce"
+    }
+   }
+  },
+  {
+   "name": "order_count",
+   "label": "Orders",
+   "description": "",
+   "type": "simple",
+   "type_params": {
+    "measure": {
+     "name": "orders",
+     "filter": null,
+     "alias": null
+    }
+   },
+   "filter": null,
+   "config": {
+    "meta": {
+     "owner": "priya.n@acme.com",
+     "team": "Digital Commerce"
+    }
+   }
+  },
+  {
+   "name": "average_order_value",
+   "label": "Average Order Value",
+   "type": "ratio",
+   "description": "",
+   "type_params": {
+    "numerator": {
+     "name": "ecom_revenue"
+    },
+    "denominator": {
+     "name": "order_count"
+    }
+   },
+   "filter": null,
+   "config": {
+    "meta": {
+     "owner": "priya.n@acme.com",
+     "team": "Digital Commerce"
+    }
+   }
+  },
+  {
+   "name": "revenue_7d_rolling",
+   "label": "Revenue 7-day Rolling",
+   "type": "cumulative",
+   "description": "",
+   "type_params": {
+    "measure": {
+     "name": "invoice_amount"
+    },
+    "window": {
+     "count": 7,
+     "granularity": "day"
+    }
+   },
+   "filter": null,
+   "config": {
+    "meta": {
+     "owner": "meera.iyer@acme.com",
+     "team": "Group Finance BI"
+    }
+   }
+  }
+ ],
+ "project_configuration": {
+  "time_spine_table_configurations": []
+ }
+}

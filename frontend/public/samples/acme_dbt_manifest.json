@@ -1,0 +1,209 @@
+{
+ "metadata": {
+  "dbt_schema_version": "https://schemas.getdbt.com/dbt/manifest/v12.json",
+  "dbt_version": "1.10.0",
+  "project_name": "acme_dbt",
+  "generated_at": "2026-11-20T06:00:00Z",
+  "adapter_type": "snowflake"
+ },
+ "nodes": {
+  "model.acme_dbt.stg_sap_invoices": {
+   "unique_id": "model.acme_dbt.stg_sap_invoices",
+   "resource_type": "model",
+   "name": "stg_sap_invoices",
+   "alias": "stg_sap_invoices",
+   "schema": "analytics",
+   "database": "acme",
+   "description": "Invoice lines from SAP S/4HANA",
+   "depends_on": {
+    "macros": [],
+    "nodes": [
+     "source.acme_dbt.sap.invoices"
+    ]
+   },
+   "config": {
+    "materialized": "table"
+   }
+  },
+  "model.acme_dbt.stg_sap_credit_notes": {
+   "unique_id": "model.acme_dbt.stg_sap_credit_notes",
+   "resource_type": "model",
+   "name": "stg_sap_credit_notes",
+   "alias": "stg_sap_credit_notes",
+   "schema": "analytics",
+   "database": "acme",
+   "description": "Returns, discounts and rebates booked as credit notes",
+   "depends_on": {
+    "macros": [],
+    "nodes": [
+     "source.acme_dbt.sap.credit_notes"
+    ]
+   },
+   "config": {
+    "materialized": "table"
+   }
+  },
+  "model.acme_dbt.fct_revenue": {
+   "unique_id": "model.acme_dbt.fct_revenue",
+   "resource_type": "model",
+   "name": "fct_revenue",
+   "alias": "fct_revenue",
+   "schema": "analytics",
+   "database": "acme",
+   "description": "Daily revenue by customer and region",
+   "depends_on": {
+    "macros": [],
+    "nodes": [
+     "model.acme_dbt.stg_sap_invoices",
+     "model.acme_dbt.stg_sap_credit_notes"
+    ]
+   },
+   "config": {
+    "materialized": "table"
+   }
+  },
+  "model.acme_dbt.stg_shopify_orders": {
+   "unique_id": "model.acme_dbt.stg_shopify_orders",
+   "resource_type": "model",
+   "name": "stg_shopify_orders",
+   "alias": "stg_shopify_orders",
+   "schema": "analytics",
+   "database": "acme",
+   "description": "Shopify Plus orders",
+   "depends_on": {
+    "macros": [],
+    "nodes": [
+     "source.acme_dbt.shopify.orders"
+    ]
+   },
+   "config": {
+    "materialized": "table"
+   }
+  },
+  "model.acme_dbt.stg_shopify_refunds": {
+   "unique_id": "model.acme_dbt.stg_shopify_refunds",
+   "resource_type": "model",
+   "name": "stg_shopify_refunds",
+   "alias": "stg_shopify_refunds",
+   "schema": "analytics",
+   "database": "acme",
+   "description": "Shopify refunds",
+   "depends_on": {
+    "macros": [],
+    "nodes": [
+     "source.acme_dbt.shopify.refunds"
+    ]
+   },
+   "config": {
+    "materialized": "table"
+   }
+  },
+  "model.acme_dbt.fct_ecom_orders": {
+   "unique_id": "model.acme_dbt.fct_ecom_orders",
+   "resource_type": "model",
+   "name": "fct_ecom_orders",
+   "alias": "fct_ecom_orders",
+   "schema": "analytics",
+   "database": "acme",
+   "description": "eCom orders net of refunds",
+   "depends_on": {
+    "macros": [],
+    "nodes": [
+     "model.acme_dbt.stg_shopify_orders",
+     "model.acme_dbt.stg_shopify_refunds"
+    ]
+   },
+   "config": {
+    "materialized": "table"
+   }
+  }
+ },
+ "sources": {
+  "source.acme_dbt.sap.invoices": {
+   "unique_id": "source.acme_dbt.sap.invoices",
+   "resource_type": "source",
+   "source_name": "sap",
+   "name": "invoices",
+   "database": "raw",
+   "schema": "sap"
+  },
+  "source.acme_dbt.sap.credit_notes": {
+   "unique_id": "source.acme_dbt.sap.credit_notes",
+   "resource_type": "source",
+   "source_name": "sap",
+   "name": "credit_notes",
+   "database": "raw",
+   "schema": "sap"
+  },
+  "source.acme_dbt.shopify.orders": {
+   "unique_id": "source.acme_dbt.shopify.orders",
+   "resource_type": "source",
+   "source_name": "shopify",
+   "name": "orders",
+   "database": "raw",
+   "schema": "shopify"
+  },
+  "source.acme_dbt.shopify.refunds": {
+   "unique_id": "source.acme_dbt.shopify.refunds",
+   "resource_type": "source",
+   "source_name": "shopify",
+   "name": "refunds",
+   "database": "raw",
+   "schema": "shopify"
+  }
+ },
+ "exposures": {
+  "exposure.acme_dbt.finance_board_pack": {
+   "unique_id": "exposure.acme_dbt.finance_board_pack",
+   "resource_type": "exposure",
+   "name": "finance_board_pack",
+   "label": "Finance Board Pack (dbt)",
+   "type": "dashboard",
+   "maturity": "high",
+   "url": "https://bi.acme.example/board",
+   "owner": {
+    "name": "Meera Iyer",
+    "email": "meera.iyer@acme.com"
+   },
+   "meta": {
+    "audience": "exec",
+    "monthly_viewers": 40
+   },
+   "depends_on": {
+    "nodes": [
+     "model.acme_dbt.fct_revenue"
+    ],
+    "metrics": [
+     "metric.acme_dbt.net_revenue",
+     "metric.acme_dbt.domestic_revenue"
+    ]
+   }
+  },
+  "exposure.acme_dbt.ecom_weekly": {
+   "unique_id": "exposure.acme_dbt.ecom_weekly",
+   "resource_type": "exposure",
+   "name": "ecom_weekly",
+   "label": "eCom Weekly (dbt)",
+   "type": "dashboard",
+   "owner": {
+    "name": "Priya N",
+    "email": "priya.n@acme.com"
+   },
+   "meta": {
+    "monthly_viewers": 60
+   },
+   "depends_on": {
+    "nodes": [
+     "model.acme_dbt.fct_ecom_orders"
+    ],
+    "metrics": [
+     "metric.acme_dbt.ecom_revenue",
+     "metric.acme_dbt.refund_rate",
+     "metric.acme_dbt.average_order_value"
+    ]
+   }
+  }
+ },
+ "metrics": {},
+ "semantic_models": {}
+}
